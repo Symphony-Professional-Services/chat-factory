@@ -38,5 +38,3 @@ Metrics Tracking:
 metrics_log.csv maintains a history of all analytics runs, facilitating trend analysis over time.
 Customization:
 Extend taxonomy.json and config.py to include more advisors, clients, categories, and topics as needed.
-Error Handling:
-The scripts include basic error handling. For more robust solutions, consider enhancing exception management and validation.
