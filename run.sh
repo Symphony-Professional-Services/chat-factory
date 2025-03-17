@@ -25,8 +25,12 @@ echo "Start Time: ${START_TIME}" | tee -a "$LOG_FILE"
 echo "Metadata: ${METADATA}" | tee -a "$LOG_FILE"
 echo "Running main.py..." | tee -a "$LOG_FILE"
 
+# Create the synthetic_data directory if it doesn't exist and set permissions
+mkdir -p synthetic_data
+chmod -R 777 synthetic_data
+
 # Run main.py and log output and errors
-python main.py >> "$LOG_FILE" 2>&1
+poetry run python main.py >> "$LOG_FILE" 2>&1
 
 # Check if main.py ran successfully
 if [ $? -ne 0 ]; then
@@ -40,7 +44,7 @@ echo "main.py completed successfully." | tee -a "$LOG_FILE"
 echo "Running metrics.py..." | tee -a "$LOG_FILE"
 
 # Run metrics.py with run_id and metadata, log output and errors
-python metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
+poetry run python metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
 
 # Check if metrics.py ran successfully
 if [ $? -ne 0 ]; then

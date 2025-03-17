@@ -26,6 +26,11 @@ Generates synthetic chat conversations based on predefined advisors, clients, ca
 FOR DATA GENERATION AND RUN LOGGING: sh run.sh
 
 FOR METRICS: python display_metrics.py
+FOR SPECIFIC RUN
+- python metrics.py --run_id <your_run_id> --metadata "Optional metadata for this run"
+Replace <your_run_id> with the actual run ID (e.g., timestamp directory name).
+FOR GLOBAL
+- python metrics.py --repo_metrics
 FOR OBO SCRIPT FORMAT: python process_synthetic_data.py
 
 ## Additional Notes
@@ -40,3 +45,32 @@ Customization:
 Extend taxonomy.json and config.py to include more advisors, clients, categories, and topics as needed.
 Error Handling:
 The scripts include basic error handling. For more robust solutions, consider enhancing exception management and validation.
+
+
+
+### Docker Build
+sudo docker build -t synthetic-chat-generator . --no-cache
+
+docker run -it --rm -v $(pwd)/synthetic_data:/app/synthetic_data synthetic-chat-generator (unknown error no log file outside of mount)
+docker run -it --rm -v $(pwd):/app synthetic-chat-generator (file perm error)
+
+docker run -it --rm \
+    -v $(pwd):/app \
+    -v $(pwd)/google-service-account.json:/app/service-account-key.json \
+    -e GOOGLE_APPLICATION_CREDENTIALS=/app/service-account-key.json \
+    synthetic-chat-generator
+
+
+### BASH SCRIPT INSIDE OF DOCKER IMAGE (DEBUG)
+docker run -it --entrypoint bash synthetic-chat-generator
+
+
+
+NEED TO FIX LINES LIKE THIS WITH \u2013 text:
+                    "text": "Morning Betty.  Saw the preliminary Q3 earnings report for Amer Sports (AMS.HE) \u2013 slightly below expectations, impacting their share price.  Any thoughts on how this might affect their partnership with  Adidas (ADS.DE)?  Also,  I'm keeping a close eye on Citigroup (C) and their exposure to the current turmoil in the commercial real estate market.  Meanwhile,  Morgan Stanly's (MS) recent report on Copasa (CPAS3.SA) is quite bullish, a stark contrast to the generally bearish sentiment surrounding Brazilian utilities.  Have you had a chance to review it?"
+
+
+NEED TO IMPROVE VARIABILITY / JUDGE/FILTER USING EMBEDDINGS TO FIND DIVERSITY OF CONTENT
+
+NEED TO IMPROVE TAXONOMY IMPORT AND REDO INTEGRATION WITH CONFIG FILE 
+NEED TO MAKE IT MORE FLEXIBLE AND MODULAR - GET DAG DESIGN OF CODE

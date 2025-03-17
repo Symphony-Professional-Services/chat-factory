@@ -1,74 +1,46 @@
 {
-  "Small Talk": [
-    "Weekend Activities",
-    "Sports Events",
-    "Weather",
-    "Local Happenings",
-    "Personal Updates"
-  ],
-  "Market Commentary": [
-    "Market Volatility",
-    "Interest Rates",
-    "Inflation",
-    "Market Trends",
-    "Economic Outlook",
-    "Regulatory Changes"
-  ],
-  "Client Personal Concerns": [
-    "Personal Financial Situation",
-    "Life Events",
-    "Health Concerns",
-    "Job Changes",
-    "Family Matters",
-    "Changes in Personal Circumstances"
-  ],
-  "Product & Service Inquiry": {
-    "Investment Products": [
-      "Stocks",
-      "Bonds",
-      "ETFs",
-      "Mutual Funds",
-      "Real Estate Investments",
-      "Alternative Investments"
-    ],
-    "Financial Services": [
-      "Wealth Management",
-      "Financial Planning Services",
-      "Retirement Accounts",
-      "Estate Planning Services",
-      "Tax Planning Services",
-      "Insurance Services"
-    ]
-  },
-  "Business/Advisory": {
-    "Financial Goals & Planning": [
-      "Retirement Goals",
-      "Investment Goals",
-      "Education Planning",
-      "Estate Planning",
-      "Major Purchases",
-      "Debt Management",
-      "Emergency Funds",
-      "Financial Situation & Review",
-      "Insurance Coverage",
-      "Tax Planning",
-      "Investment Performance"
-    ],
-    "Ultra High Net Worth Specifics": [
-      "Wealth Preservation",
-      "Complex Investments",
-      "Business Succession Planning",
-      "Concentrated Positions",
-      "Reputation Management",
-      "Legal and Regulatory Compliance",
-      "Family Governance",
-      "Lifestyle Management"
-    ],
-    "Other Important Topics": [
-      "Risk Management",
-      "Economic Outlook",
-      "Financial Education",
-      "Changes in Personal Circumstances"
-    ]
+  "conversation_types": {
+    "Trade Discussions": {
+      "description": "Informal, quick back-and-forth messages with minimal context, focused on trading ideas and execution.",
+      "message_format": "informal",
+      "message_style": "concise, direct, action-oriented",
+      "example_keywords": ["trade", "buy", "sell", "price", "volume", "execution"],
+      "typical_message_length": "short-medium"
+    },
+    "Deal Negotiations": {
+      "description": "Informal but focused conversations about deal terms, progress, and roadblocks.",
+      "message_format": "informal",
+      "message_style": "persuasive, iterative, detail-oriented",
+      "example_keywords": ["deal", "negotiate", "terms", "agreement", "valuation", "diligence"],
+      "typical_message_length": "medium"
+    },
+    "Stock Analysis": {
+      "description": "Formal, professional analysis of specific stocks, including factors, risks, and recommendations.",
+      "message_format": "formal",
+      "message_style": "analytical, data-driven, reasoned",
+      "example_keywords": ["analysis", "valuation", "fundamentals", "technicals", "risk", "recommendation", "target price"],
+      "typical_message_length": "medium-long"
+    },
+    "Market Updates": {
+      "description": "Formal, professional updates on market conditions, trends, and economic events impacting markets.",
+      "message_format": "formal",
+      "message_style": "informative, objective, broad",
+      "example_keywords": ["market", "update", "trends", "volatility", "economic data", "rates", "sectors"],
+      "typical_message_length": "medium-long"
+    },
+    "News on Specific Companies": {
+      "description": "Formal discussions about recent news, events, or reports related to specific companies.",
+      "message_format": "formal",
+      "message_style": "factual, reporting-style, contextual",
+      "example_keywords": ["news", "report", "event", "announcement", "press release", "developments", "update"],
+      "typical_message_length": "medium"
+    },
+    "Earnings Reports Discussions": {
+      "description": "Formal, analytical discussions focused on company earnings reports, performance, and outlook.",
+      "message_format": "formal",
+      "message_style": "analytical, forward-looking, performance-focused",
+      "example_keywords": ["earnings", "report", "quarter", "revenue", "profit", "guidance", "outlook", "performance"],
+      "typical_message_length": "medium-long"
+    }
   }
 }

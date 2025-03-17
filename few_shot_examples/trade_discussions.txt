@@ -1,0 +1,33 @@
+<BEGIN CONVERSATION>
+[
+    {
+        "speaker": "1",
+        "text": "Buy AAPL at open?"
+    },
+    {
+        "speaker": "0",
+        "text": "Yes, looks good for a short-term trade."
+    },
+    {
+        "speaker": "1",
+        "text": "Target price?"
+    }
+]
+<END CONVERSATION>
+
+<BEGIN CONVERSATION>
+[
+    {
+        "speaker": "0",
+        "text": "GS looking weak today."
+    },
+    {
+        "speaker": "1",
+        "text": "Agree, thinking of shorting."
+    },
+    {
+        "speaker": "0",
+        "text": "Good entry point around $380."
+    }
+]
+<END CONVERSATION>
