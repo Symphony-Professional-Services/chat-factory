@@ -5,42 +5,52 @@
       "message_format": "informal",
       "message_style": "concise, direct, action-oriented",
       "example_keywords": ["trade", "buy", "sell", "price", "volume", "execution"],
-      "typical_message_length": "short-medium"
+      "typical_message_length": "short-medium",
+      "company_count_options": [1, 2]
     },
     "Deal Negotiations": {
       "description": "Informal but focused conversations about deal terms, progress, and roadblocks.",
       "message_format": "informal",
       "message_style": "persuasive, iterative, detail-oriented",
       "example_keywords": ["deal", "negotiate", "terms", "agreement", "valuation", "diligence"],
-      "typical_message_length": "medium"
+      "typical_message_length": "medium",
+      "company_count_options": [1]
     },
     "Stock Analysis": {
       "description": "Formal, professional analysis of specific stocks, including factors, risks, and recommendations.",
       "message_format": "formal",
       "message_style": "analytical, data-driven, reasoned",
       "example_keywords": ["analysis", "valuation", "fundamentals", "technicals", "risk", "recommendation", "target price"],
-      "typical_message_length": "medium-long"
+      "typical_message_length": "medium-long",
+      "company_count_options": [1, 2, 3, 4]
+
     },
     "Market Updates": {
-      "description": "Formal, professional updates on market conditions, trends, and economic events impacting markets.",
+      "description": "Formal, professional updates on market conditions, trends, and economic events impacting markets. (this should mostly focus on the broader market and should mention market indices)",
       "message_format": "formal",
       "message_style": "informative, objective, broad",
       "example_keywords": ["market", "update", "trends", "volatility", "economic data", "rates", "sectors"],
-      "typical_message_length": "medium-long"
+      "typical_message_length": "medium-long",
+      "company_count_options": [1, 2]
+
     },
     "News on Specific Companies": {
       "description": "Formal discussions about recent news, events, or reports related to specific companies.",
       "message_format": "formal",
       "message_style": "factual, reporting-style, contextual",
       "example_keywords": ["news", "report", "event", "announcement", "press release", "developments", "update"],
-      "typical_message_length": "medium"
+      "typical_message_length": "medium",
+      "company_count_options": [1]
+
     },
     "Earnings Reports Discussions": {
       "description": "Formal, analytical discussions focused on company earnings reports, performance, and outlook.",
       "message_format": "formal",
       "message_style": "analytical, forward-looking, performance-focused",
       "example_keywords": ["earnings", "report", "quarter", "revenue", "profit", "guidance", "outlook", "performance"],
-      "typical_message_length": "medium-long"
+      "typical_message_length": "medium-long",
+      "company_count_options": [1]
+
     }
   }
 }

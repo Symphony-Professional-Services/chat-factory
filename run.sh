@@ -30,7 +30,9 @@ mkdir -p synthetic_data
 chmod -R 777 synthetic_data
 
 # Run main.py and log output and errors
-poetry run python main.py >> "$LOG_FILE" 2>&1
+#poetry run python main.py >> "$LOG_FILE" 2>&1
+poetry run python main.py --run_id "$RUN_ID" >> "$LOG_FILE" 2>&1
+
 
 # Check if main.py ran successfully
 if [ $? -ne 0 ]; then

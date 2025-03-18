@@ -1,3 +1,4 @@
+
 # #!/usr/bin/env python3
 
 # import os
@@ -7,70 +8,83 @@
 # import pandas as pd
 # import argparse
 # from datetime import datetime
+# import glob
 
 # def parse_arguments():
 #     """
 #     Parses command-line arguments.
 #     """
 #     parser = argparse.ArgumentParser(description="Analyze synthetic chat data and log metrics.")
-#     parser.add_argument('--run_id', type=str, required=True, help='Unique identifier for the run (e.g., timestamp)')
-#     parser.add_argument('--metadata', type=str, default='', help='Additional metadata for the run')
+#     parser.add_argument('--run_id', type=str, default=None, help='Unique identifier for the run (e.g., timestamp) - for run-specific metrics.')
+#     parser.add_argument('--metadata', type=str, default='', help='Additional metadata for the run.')
+#     parser.add_argument('--repo_metrics', action='store_true', help='Analyze metrics for the entire synthetic data repository (ignores --run_id and --metadata).')
 #     return parser.parse_args()
 
-# def analyze_data(data_dir):
+# def analyze_data(data_dir, is_repository_analysis=False):
 #     """
-#     Analyzes the synthetic chat data.
+#     Analyzes synthetic chat data, either for a specific run or the entire repository.
 
+#     Expects each JSON file to be a dictionary with a key "conversations" that is a list.
+    
 #     Parameters:
-#     - data_dir (Path): Path to the synthetic_data directory.
+#     - data_dir (Path): Path to the synthetic_data directory or a run-specific subdirectory.
+#     - is_repository_analysis (bool): Flag to indicate if it's a repository-wide analysis.
 
 #     Returns:
 #     - dict: Dictionary containing all the computed metrics.
 #     """
-#     # Initialize counters and data structures
 #     total_conversations = 0
 #     advisor_conversations = defaultdict(int)
 #     client_conversations = defaultdict(int)
 #     topic_counter = Counter()
 #     category_counter = Counter()
-    
-#     # Iterate through the advisor and client directories
-#     for advisor_dir in data_dir.iterdir():
-#         if advisor_dir.is_dir():
-#             advisor_name = advisor_dir.name
-#             for client_file in advisor_dir.glob('*.json'):
-#                 client_name = client_file.stem
-#                 try:
-#                     with open(client_file, 'r', encoding='utf-8') as f:
-#                         data = json.load(f)
-                    
-#                     conversations = data.get('conversations', [])
-                    
-#                     # Update total conversations
-#                     num_convs = len(conversations)
-#                     total_conversations += num_convs
-                    
-#                     # Update advisor and client conversation cts
-#                     advisor_conversations[advisor_name] += num_convs
-#                     client_conversations[client_name] += num_convs
-                    
-#                     # Update ct for metrics
-#                     for conv in conversations:
-#                         topic = conv.get('topic', 'Unknown')
-#                         category = conv.get('category', 'Unknown')
-#                         topic_counter[topic] += 1
-#                         category_counter[category] += 1
-                        
-#                 except json.JSONDecodeError:
-#                     print(f"Error decoding JSON in file: {client_file}")
-#                 except Exception as e:
-#                     print(f"Unexpected error processing file {client_file}: {e}")
-    
-#     num_advisors = len([d for d in data_dir.iterdir() if d.is_dir()])
+#     processed_files = 0
+
+#     file_list = []
+#     if is_repository_analysis:
+#         # For repository analysis, find all JSON files in all advisor directories.
+#         for advisor_dir in data_dir.iterdir():
+#             if advisor_dir.is_dir():
+#                 file_list.extend(glob.glob(str(advisor_dir / "*.json")))
+#     else:
+#         # For run-specific analysis, assume data_dir is the run directory with subdirectories per advisor.
+#         file_list.extend(glob.glob(str(data_dir / "*/*.json")))
+
+#     for filepath_str in file_list:
+#         client_file = Path(filepath_str)
+#         advisor_name = client_file.parent.name
+#         client_name = client_file.stem
+#         try:
+#             with open(client_file, 'r', encoding='utf-8') as f:
+#                 data = json.load(f)
+            
+#             if isinstance(data, dict) and "conversations" in data and isinstance(data["conversations"], list):
+#                 conversations = data["conversations"]
+#                 num_convs = len(conversations)
+#                 total_conversations += num_convs
+#                 processed_files += 1
+
+#                 advisor_conversations[advisor_name] += num_convs
+#                 client_conversations[client_name] += num_convs
+
+#                 for conv in conversations:
+#                     topic = conv.get('topic', 'Unknown')
+#                     category = conv.get('category', 'Unknown')
+#                     topic_counter[topic] += 1
+#                     category_counter[category] += 1
+#             else:
+#                 print(f"Warning: Unexpected JSON structure in file: {client_file}. Expected a dict with key 'conversations'.")
+#         except json.JSONDecodeError:
+#             print(f"Error decoding JSON in file: {client_file}")
+#         except Exception as e:
+#             print(f"Unexpected error processing file {client_file}: {e}")
+
+#     num_advisors = len([d for d in data_dir.iterdir() if d.is_dir() and any(f.suffix == '.json' for f in d.iterdir())])
 #     num_clients = len(set(client_conversations.keys()))
-    
+
 #     metrics = {
 #         'total_conversations': total_conversations,
+#         'processed_json_files': processed_files,
 #         'num_advisors': num_advisors,
 #         'num_clients': num_clients,
 #         'advisor_conversations': dict(advisor_conversations),
@@ -81,114 +95,115 @@
     
 #     return metrics
 
-# def display_metrics(metrics):
-#     """
-#     Displays the metrics on the console.
-
-#     Parameters:
-#     - metrics (dict): Dictionary containing all the computed metrics.
-#     """
-#     print("\n=== Synthetic Chat Data Analytics ===\n")
+# def display_metrics(metrics, is_repository_analysis=False):
+#     analysis_type = "Synthetic Data Repository" if is_repository_analysis else "Synthetic Data Generation Run"
+#     print(f"\n=== {analysis_type} Analytics ===\n")
+#     print(f"Total Number of Conversations: {metrics['total_conversations']}")
+#     print(f"Total JSON Files Processed: {metrics['processed_json_files']}\n")
     
-#     print(f"Total Number of Conversations: {metrics['total_conversations']}\n")
-    
-#     print("Number of Conversations per Advisor:")
+#     print("Conversations per Advisor:")
 #     advisor_df = pd.DataFrame.from_dict(metrics['advisor_conversations'], orient='index', columns=['Conversations'])
 #     advisor_df = advisor_df.sort_values(by='Conversations', ascending=False)
-#     print(advisor_df)
-#     print("\n")
+#     print(advisor_df, "\n")
     
-#     print("Number of Conversations per Client:")
+#     print("Conversations per Client:")
 #     client_df = pd.DataFrame.from_dict(metrics['client_conversations'], orient='index', columns=['Conversations'])
 #     client_df = client_df.sort_values(by='Conversations', ascending=False)
-#     print(client_df)
-#     print("\n")
+#     print(client_df, "\n")
     
-#     print(f"Total Number of Advisors (Channels): {metrics['num_advisors']}\n")
-#     print(f"Total Number of Clients: {metrics['num_clients']}\n")
+#     print(f"Total Advisors (Channels): {metrics['num_advisors']}")
+#     print(f"Total Clients: {metrics['num_clients']}\n")
     
 #     print("Top 10 Topics:")
 #     topic_df = pd.DataFrame(metrics['top_topics'], columns=['Topic', 'Count'])
-#     print(topic_df)
-#     print("\n")
+#     print(topic_df, "\n")
     
 #     print("Top 10 Categories:")
 #     category_df = pd.DataFrame(metrics['top_categories'], columns=['Category', 'Count'])
-#     print(category_df)
-#     print("\n")
+#     print(category_df, "\n")
     
-#     print("=== End of Analytics ===\n")
+#     print(f"=== End of {analysis_type} Analytics ===\n")
 
-# def log_metrics(run_id, metadata, metrics, csv_file='metrics_log.csv'):
-#     """
-#     Logs the metrics to a CSV file.
+# def log_metrics(run_id, metadata, metrics, csv_file='metrics_log.csv', is_repository_analysis=False):
+#     log_type = "repository_metrics" if is_repository_analysis else "run_metrics"
+#     run_identifier = run_id if run_id else "repository_analysis"
 
-#     Parameters:
-#     - run_id (str): Unique identifier for the run.
-#     - metadata (str): Additional metadata for the run.
-#     - metrics (dict): Dictionary containing all the computed metrics.
-#     - csv_file (str): Path to the CSV file for logging metrics.
-#     """
-#     # Prepare data for logging
 #     log_entry = {
-#         'run_id': run_id,
-#         'metadata': metadata,
+#         'type': log_type,
+#         'run_id': run_identifier,
+#         'metadata': metadata if metadata else "repository_analysis",
 #         'timestamp': datetime.utcnow().isoformat() + "Z",
 #         'total_conversations': metrics['total_conversations'],
+#         'processed_json_files': metrics['processed_json_files'],
 #         'num_advisors': metrics['num_advisors'],
 #         'num_clients': metrics['num_clients']
 #     }
     
-#     # Flatten conversations
 #     for advisor, count in metrics['advisor_conversations'].items():
-#         key = f'advisor_{advisor}_conversations'
+#         key = f'advisor_{advisor.replace(" ", "_")}_conversations'
 #         log_entry[key] = count
-    
-#     # Flatten conversations
+
 #     for client, count in metrics['client_conversations'].items():
-#         key = f'client_{client}_conversations'
+#         key = f'client_{client.replace(" ", "_")}_conversations'
 #         log_entry[key] = count
-    
-#     # Flatten top_topics
+
 #     for i, (topic, count) in enumerate(metrics['top_topics'], start=1):
-#         key = f'top_topic_{i}'
-#         log_entry[key] = topic
+#         log_entry[f'top_topic_{i}'] = topic
 #         log_entry[f'top_topic_{i}_count'] = count
-    
-#     # Flatten top_categories
+
 #     for i, (category, count) in enumerate(metrics['top_categories'], start=1):
-#         key = f'top_category_{i}'
-#         log_entry[key] = category
+#         log_entry[f'top_category_{i}'] = category
 #         log_entry[f'top_category_{i}_count'] = count
-    
-#     file_exists = Path(csv_file).is_file()
+
+#     csv_file_name = csv_file if not is_repository_analysis else 'repository_metrics_log.csv'
+#     file_exists = Path(csv_file_name).is_file()
 #     df = pd.DataFrame([log_entry])
     
 #     try:
 #         if not file_exists:
-#             df.to_csv(csv_file, index=False)
-#             print(f"Created new metrics log file: {csv_file}")
+#             df.to_csv(csv_file_name, index=False)
+#             print(f"Created new metrics log file: {csv_file_name}")
 #         else:
-#             df.to_csv(csv_file, mode='a', header=False, index=False)
-#             print(f"Appended metrics to existing log file: {csv_file}")
+#             df.to_csv(csv_file_name, mode='a', header=False, index=False)
+#             print(f"Appended metrics to existing log file: {csv_file_name}")
 #     except Exception as e:
-#         print(f"Error writing to CSV file {csv_file}: {e}")
+#         print(f"Error writing to CSV file {csv_file_name}: {e}")
 
 # def main():
 #     args = parse_arguments()
 #     run_id = args.run_id
 #     metadata = args.metadata
-    
+#     repo_metrics = args.repo_metrics
+
 #     DATA_DIR = Path('synthetic_data')
-    
-#     metrics = analyze_data(DATA_DIR)
-    
-#     display_metrics(metrics)
-    
-#     log_metrics(run_id, metadata, metrics)
+
+#     if repo_metrics:
+#         print("Analyzing metrics for the entire synthetic data repository...")
+#         metrics = analyze_data(DATA_DIR, is_repository_analysis=True)
+#         display_metrics(metrics, is_repository_analysis=True)
+#         log_metrics('repository', 'repository_analysis', metrics, is_repository_analysis=True)
+#     elif run_id:
+#         RUN_DATA_DIR = DATA_DIR / run_id
+#         if not RUN_DATA_DIR.exists() or not RUN_DATA_DIR.is_dir():
+#             print(f"Error: Run directory not found: {RUN_DATA_DIR}. Please provide a valid --run_id.")
+#             # For debugging: list all available directories in DATA_DIR.
+#             print("Available run directories in", DATA_DIR, "are:")
+#             for d in DATA_DIR.iterdir():
+#                 if d.is_dir():
+#                     print(" -", d.name)
+#             return
+
+#         print(f"Analyzing metrics for run: {run_id}...")
+#         metrics = analyze_data(RUN_DATA_DIR)
+#         display_metrics(metrics)
+#         log_metrics(run_id, metadata, metrics)
+#     else:
+#         print("Error: Please provide either --run_id for a specific run or --repo_metrics for repository analysis.")
+#         return
 
 # if __name__ == "__main__":
 #     main()
+
 
 #!/usr/bin/env python3
 
@@ -200,6 +215,11 @@ import pandas as pd
 import argparse
 from datetime import datetime
 import glob
+import statistics
+import logging
+
+# Import config so we can load company data file path
+import config
 
 def parse_arguments():
     """
@@ -211,177 +231,602 @@ def parse_arguments():
     parser.add_argument('--repo_metrics', action='store_true', help='Analyze metrics for the entire synthetic data repository (ignores --run_id and --metadata).')
     return parser.parse_args()
 
+# def analyze_data(data_dir, is_repository_analysis=False):
+#     """
+#     Analyzes synthetic chat data, either for a specific run or the entire repository.
+
+#     Expects each JSON file to be a dictionary with a key "conversations" that is a list.
+    
+#     Also computes:
+#       - Distribution of conversation lengths (number of messages per conversation).
+#       - Company mentions: total mentions and frequency per company.
+    
+#     Returns:
+#       dict: Dictionary containing all the computed metrics.
+#     """
+#     total_conversations = 0
+#     advisor_conversations = defaultdict(int)
+#     client_conversations = defaultdict(int)
+#     topic_counter = Counter()
+#     category_counter = Counter()
+#     processed_files = 0
+
+#     # Lists to store additional metrics
+#     conversation_lengths = []  # List of message counts per conversation
+#     company_mentions_per_conversation = []  # Total company mentions in each conversation
+#     overall_company_mentions = Counter()  # Overall count per company
+
+#     # Load company list from the CSV defined in config
+#     try:
+#         #companies_df = pd.read_csv(config.COMPANY_DATA_FILE)
+#         companies_df = pd.read_csv(config.COMPANY_DATA_FILE, engine="python", on_bad_lines='warn')
+
+#         company_list = companies_df["name"].dropna().tolist()
+#         logging.info(f"Loaded {len(company_list)} companies from {config.COMPANY_DATA_FILE}")
+
+#     except Exception as e:
+#         print(f"Error loading company data from {config.COMPANY_DATA_FILE}: {e}")
+#         company_list = []
+
+#     file_list = []
+#     if is_repository_analysis:
+#         for advisor_dir in data_dir.iterdir():
+#             if advisor_dir.is_dir():
+#                 file_list.extend(glob.glob(str(advisor_dir / "*.json")))
+#     else:
+#         file_list.extend(glob.glob(str(data_dir / "*/*.json")))
+
+#     for filepath_str in file_list:
+#         client_file = Path(filepath_str)
+#         advisor_name = client_file.parent.name
+#         client_name = client_file.stem
+#         try:
+#             with open(client_file, 'r', encoding='utf-8') as f:
+#                 data = json.load(f)
+            
+#             if isinstance(data, dict) and "conversations" in data and isinstance(data["conversations"], list):
+#                 conversations = data["conversations"]
+#                 num_convs = len(conversations)
+#                 total_conversations += num_convs
+#                 processed_files += 1
+
+#                 advisor_conversations[advisor_name] += num_convs
+#                 client_conversations[client_name] += num_convs
+
+#                 for conv in conversations:
+#                     # Calculate conversation length (number of messages)
+#                     lines = conv.get("lines", [])
+#                     length = len(lines)
+#                     conversation_lengths.append(length)
+                    
+#                     # Count company mentions in this conversation
+#                     conv_company_count = 0
+#                     for line in lines:
+#                         text = line.get("text", "").lower()
+#                         for company in company_list:
+#                             # Count occurrences of the company name (case-insensitive)
+#                             count = text.count(company.lower())
+#                             if count > 0:
+#                                 overall_company_mentions[company] += count
+#                                 conv_company_count += count
+#                     company_mentions_per_conversation.append(conv_company_count)
+                    
+#                     topic = conv.get('topic', 'Unknown')
+#                     category = conv.get('category', 'Unknown')
+#                     topic_counter[topic] += 1
+#                     category_counter[category] += 1
+#             else:
+#                 print(f"Warning: Unexpected JSON structure in file: {client_file}. Expected a dict with key 'conversations'.")
+#         except json.JSONDecodeError:
+#             print(f"Error decoding JSON in file: {client_file}")
+#         except Exception as e:
+#             print(f"Unexpected error processing file {client_file}: {e}")
+
+#     num_advisors = len([d for d in data_dir.iterdir() if d.is_dir() and any(f.suffix == '.json' for f in d.iterdir())])
+#     num_clients = len(set(client_conversations.keys()))
+
+#     # Compute conversation length stats if available
+#     if conversation_lengths:
+#         min_length = min(conversation_lengths)
+#         max_length = max(conversation_lengths)
+#         avg_length = sum(conversation_lengths) / len(conversation_lengths)
+#         med_length = statistics.median(conversation_lengths)
+#     else:
+#         min_length = max_length = avg_length = med_length = 0
+
+#     # Compute company mention stats
+#     total_company_mentions = sum(overall_company_mentions.values())
+#     if company_mentions_per_conversation:
+#         avg_mentions = sum(company_mentions_per_conversation) / len(company_mentions_per_conversation)
+#     else:
+#         avg_mentions = 0
+
+#     metrics = {
+#         'total_conversations': total_conversations,
+#         'processed_json_files': processed_files,
+#         'num_advisors': num_advisors,
+#         'num_clients': num_clients,
+#         'advisor_conversations': dict(advisor_conversations),
+#         'client_conversations': dict(client_conversations),
+#         'top_topics': topic_counter.most_common(10),
+#         'top_categories': category_counter.most_common(10),
+#         # New metrics:
+#         'conversation_lengths': conversation_lengths,
+#         'min_conversation_length': min_length,
+#         'max_conversation_length': max_length,
+#         'avg_conversation_length': avg_length,
+#         'med_conversation_length': med_length,
+#         'total_company_mentions': total_company_mentions,
+#         'avg_company_mentions_per_conversation': avg_mentions,
+#         'top_company_mentions': overall_company_mentions.most_common(5)
+#     }
+    
+#     return metrics
+
+# def analyze_data(data_dir, is_repository_analysis=False):
+#     """
+#     Analyzes synthetic chat data, either for a specific run or the entire repository.
+    
+#     Expects each JSON file to be a dictionary with a key "conversations" that is a list.
+    
+#     This function logs detailed warnings for files that are skipped because they do not match the expected structure.
+    
+#     Parameters:
+#       - data_dir (Path): Path to the synthetic_data directory or a run-specific subdirectory.
+#       - is_repository_analysis (bool): Flag to indicate if it's a repository-wide analysis.
+    
+#     Returns:
+#       dict: Dictionary containing all the computed metrics.
+#     """
+#     total_conversations = 0
+#     advisor_conversations = defaultdict(int)
+#     client_conversations = defaultdict(int)
+#     topic_counter = Counter()
+#     category_counter = Counter()
+#     processed_files = 0
+#     conversation_lengths = []  # List to store number of messages per conversation
+#     overall_company_mentions = Counter()  # For company mention stats
+#     company_mentions_per_conversation = []  # Total company mentions per conversation
+
+#     # For debugging: list of files skipped along with reasons.
+#     skipped_files = []
+
+#     file_list = []
+#     if is_repository_analysis:
+#         # For repository analysis, find all JSON files in all advisor directories.
+#         for advisor_dir in data_dir.iterdir():
+#             if advisor_dir.is_dir():
+#                 file_list.extend(glob.glob(str(advisor_dir / "*.json")))
+#     else:
+#         # For run-specific analysis, assume data_dir is the run directory with subdirectories per advisor.
+#         file_list.extend(glob.glob(str(data_dir / "*/*.json")))
+
+#     for filepath_str in file_list:
+#         client_file = Path(filepath_str)
+#         advisor_name = client_file.parent.name
+#         client_name = client_file.stem
+#         try:
+#             with open(client_file, 'r', encoding='utf-8') as f:
+#                 data = json.load(f)
+            
+#             # Check if the file has the expected structure.
+#             if isinstance(data, dict) and "conversations" in data and isinstance(data["conversations"], list):
+#                 conversations = data["conversations"]
+#                 num_convs = len(conversations)
+#                 total_conversations += num_convs
+#                 processed_files += 1
+
+#                 advisor_conversations[advisor_name] += num_convs
+#                 client_conversations[client_name] += num_convs
+
+#                 for conv in conversations:
+#                     # Track conversation lengths.
+#                     lines = conv.get("lines", [])
+#                     conversation_lengths.append(len(lines))
+                    
+#                     # Count company mentions (if desired, using a simple case-insensitive match).
+#                     # For this, load your company list from config.COMPANY_DATA_FILE.
+#                     # Here, we assume that a company name appears as a substring in the message text.
+#                     conv_mention_count = 0
+#                     text_aggregate = " ".join([line.get("text", "").lower() for line in lines])
+#                     # If you have a preloaded company list from metrics.py, use that; otherwise, skip.
+#                     try:
+#                         companies_df = pd.read_csv(config.COMPANY_DATA_FILE, engine="python", on_bad_lines='warn')
+#                         company_list = companies_df["name"].dropna().tolist()
+#                     except Exception as e:
+#                         logging.error(f"Error loading company data from {config.COMPANY_DATA_FILE}: {e}")
+#                         company_list = []
+#                     for company in company_list:
+#                         count = text_aggregate.count(company.lower())
+#                         if count > 0:
+#                             overall_company_mentions[company] += count
+#                             conv_mention_count += count
+#                     company_mentions_per_conversation.append(conv_mention_count)
+                    
+#                     # Update topic and category metrics.
+#                     topic = conv.get('topic', 'Unknown')
+#                     category = conv.get('category', 'Unknown')
+#                     topic_counter[topic] += 1
+#                     category_counter[category] += 1
+#             else:
+#                 reason = f"Unexpected structure: Type={type(data)}"
+#                 if isinstance(data, dict):
+#                     reason += f", Keys={list(data.keys())}"
+#                 logging.info(f"Skipping file {client_file}: {reason}")
+#                 skipped_files.append((str(client_file), reason))
+#         except json.JSONDecodeError as e:
+#             err_msg = f"JSON decoding error: {e}"
+#             logging.error(f"Error decoding JSON in file {client_file}: {err_msg}")
+#             skipped_files.append((str(client_file), err_msg))
+#         except Exception as e:
+#             err_msg = f"Unexpected error: {e}"
+#             logging.error(f"Unexpected error processing file {client_file}: {err_msg}")
+#             skipped_files.append((str(client_file), err_msg))
+    
+#     # Log a summary of skipped files.
+#     if skipped_files:
+#         skipped_log_path = Path("skipped_files.txt")
+#         with skipped_log_path.open("w", encoding="utf-8") as f:
+#             for fname, reason in skipped_files:
+#                 f.write(f"{fname}: {reason}\n")
+#         logging.info(f"Details of skipped files written to {skipped_log_path.resolve()}")
+#         logging.info(f"Skipped {len(skipped_files)} files due to unexpected structure or errors:")
+#         for fname, reason in skipped_files:
+#             logging.info(f"  - {fname}: {reason}")
+    
+#     # Calculate advisors and clients count.
+#     num_advisors = len([d for d in data_dir.iterdir() if d.is_dir() and any(f.suffix == '.json' for f in d.iterdir())])
+#     num_clients = len(set(client_conversations.keys()))
+
+#     # Compute conversation length stats.
+#     if conversation_lengths:
+#         min_length = min(conversation_lengths)
+#         max_length = max(conversation_lengths)
+#         avg_length = sum(conversation_lengths) / len(conversation_lengths)
+#         med_length = statistics.median(conversation_lengths)
+#     else:
+#         min_length = max_length = avg_length = med_length = 0
+
+#     # Compute company mention stats.
+#     total_company_mentions = sum(overall_company_mentions.values())
+#     if company_mentions_per_conversation:
+#         avg_mentions = sum(company_mentions_per_conversation) / len(company_mentions_per_conversation)
+#     else:
+#         avg_mentions = 0
+
+#     metrics = {
+#         'total_conversations': total_conversations,
+#         'processed_json_files': processed_files,
+#         'num_advisors': num_advisors,
+#         'num_clients': num_clients,
+#         'advisor_conversations': dict(advisor_conversations),
+#         'client_conversations': dict(client_conversations),
+#         'top_topics': topic_counter.most_common(10),
+#         'top_categories': category_counter.most_common(10),
+#         # Conversation length metrics:
+#         'conversation_lengths': conversation_lengths,
+#         'min_conversation_length': min_length,
+#         'max_conversation_length': max_length,
+#         'avg_conversation_length': avg_length,
+#         'med_conversation_length': med_length,
+#         # Company mention metrics:
+#         'total_company_mentions': total_company_mentions,
+#         'avg_company_mentions_per_conversation': avg_mentions,
+#         'top_company_mentions': overall_company_mentions.most_common(5)
+#     }
+    
+#     return metrics
+
+import os
+import json
+import glob
+import statistics
+import logging
+from pathlib import Path
+from collections import defaultdict, Counter
+import pandas as pd
+
 def analyze_data(data_dir, is_repository_analysis=False):
     """
     Analyzes synthetic chat data, either for a specific run or the entire repository.
-
+    
+    Expects each JSON file to be a dictionary with a key "conversations" that is a list.
+    
+    Logs detailed warnings for files that are skipped because they do not match the expected structure,
+    and writes a summary of these skipped files to a text file for further review.
+    
     Parameters:
-    - data_dir (Path): Path to the synthetic_data directory or a run-specific subdirectory.
-    - is_repository_analysis (bool): Flag to indicate if it's a repository-wide analysis.
-
+      - data_dir (Path): Path to the synthetic_data directory or a run-specific subdirectory.
+      - is_repository_analysis (bool): Flag to indicate if it's a repository-wide analysis.
+    
     Returns:
-    - dict: Dictionary containing all the computed metrics.
+      dict: Dictionary containing all the computed metrics.
     """
-    # Initialize counters and data structures
     total_conversations = 0
     advisor_conversations = defaultdict(int)
     client_conversations = defaultdict(int)
     topic_counter = Counter()
     category_counter = Counter()
-    processed_files = 0 # Track files processed for accurate conversation count
+    processed_files = 0
+    conversation_lengths = []  # To store number of messages per conversation
+    overall_company_mentions = Counter()  # For company mention stats
+    company_mentions_per_conversation = []  # Total company mentions per conversation
+
+    # List to keep track of files that are skipped along with reasons
+    skipped_files = []
 
     file_list = []
     if is_repository_analysis:
-        # For repository analysis, find all JSON files in all advisor directories
+        # For repository analysis, search all JSON files in advisor directories
         for advisor_dir in data_dir.iterdir():
             if advisor_dir.is_dir():
-                file_list.extend(glob.glob(str(advisor_dir / "*.json"))) # Use glob for broader file finding
+                file_list.extend(glob.glob(str(advisor_dir / "*.json")))
     else:
-        # For run-specific analysis, data_dir is already the run directory
-        file_list.extend(glob.glob(str(data_dir / "*/*.json"))) # Look for files in subdirectories
-
+        # For run-specific analysis, assume data_dir is the run directory with subdirectories per advisor
+        file_list.extend(glob.glob(str(data_dir / "*/*.json")))
 
     for filepath_str in file_list:
-        client_file = Path(filepath_str) # Recreate Path object for consistency
-        advisor_name = client_file.parent.name # Get advisor name from parent dir name
-        client_name = client_file.stem # Get client name from filename
-
+        client_file = Path(filepath_str)
+        advisor_name = client_file.parent.name
+        client_name = client_file.stem
         try:
             with open(client_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Assuming each JSON file contains a SINGLE conversation
-                # conversation data is now directly the list of messages
-                conversation_data = data # No need to get 'conversations' as it's the root
+            
+            # Validate the structure: expect a dict with key "conversations" that is a list.
+            if isinstance(data, dict) and "conversations" in data and isinstance(data["conversations"], list):
+                conversations = data["conversations"]
+                num_convs = len(conversations)
+                total_conversations += num_convs
+                processed_files += 1
 
-                if isinstance(conversation_data, list): # Check if it is a list of messages (as expected)
-                    total_conversations += 1 # Increment for each file processed as one conversation
-                    processed_files += 1
+                advisor_conversations[advisor_name] += num_convs
+                client_conversations[client_name] += num_convs
 
-                    advisor_conversations[advisor_name] += 1
-                    client_conversations[client_name] += 1
-
-                    # Extract topic and category - assuming they are at the file level metadata, not in messages
-                    topic = data.get('conversation_type', 'Unknown') # Get conversation_type as topic
-                    category = 'Financial Chat' # Generic Category, can be updated if needed
-
+                for conv in conversations:
+                    # Track conversation lengths based on the "lines" key (default to empty list if not found)
+                    lines = conv.get("lines", [])
+                    conversation_lengths.append(len(lines))
+                    
+                    # Count company mentions using a simple case-insensitive substring match.
+                    conv_mention_count = 0
+                    text_aggregate = " ".join([line.get("text", "").lower() for line in lines])
+                    try:
+                        companies_df = pd.read_csv(config.COMPANY_DATA_FILE, engine="python", on_bad_lines='warn')
+                        company_list = companies_df["name"].dropna().tolist()
+                    except Exception as e:
+                        logging.error(f"Error loading company data from {config.COMPANY_DATA_FILE}: {e}")
+                        company_list = []
+                    for company in company_list:
+                        count = text_aggregate.count(company.lower())
+                        if count > 0:
+                            overall_company_mentions[company] += count
+                            conv_mention_count += count
+                    company_mentions_per_conversation.append(conv_mention_count)
+                    
+                    # Update topic and category metrics.
+                    topic = conv.get('topic', 'Unknown')
+                    category = conv.get('category', 'Unknown')
                     topic_counter[topic] += 1
                     category_counter[category] += 1
-                else:
-                    print(f"Warning: Unexpected JSON structure in file: {client_file}. Expected a JSON array (list of messages) at the root.")
-
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON in file: {client_file}")
+            else:
+                reason = f"Unexpected structure: Type={type(data)}"
+                if isinstance(data, dict):
+                    reason += f", Keys={list(data.keys())}"
+                logging.info(f"Skipping file {client_file}: {reason}")
+                skipped_files.append((str(client_file), reason))
+        except json.JSONDecodeError as e:
+            err_msg = f"JSON decoding error: {e}"
+            logging.error(f"Error decoding JSON in file {client_file}: {err_msg}")
+            skipped_files.append((str(client_file), err_msg))
         except Exception as e:
-            print(f"Unexpected error processing file {client_file}: {e}")
+            err_msg = f"Unexpected error: {e}"
+            logging.error(f"Unexpected error processing file {client_file}: {err_msg}")
+            skipped_files.append((str(client_file), err_msg))
+    
+    # Write the list of skipped files to a log file for further review.
+    # if skipped_files:
+    #     logs_dir = Path("logs")
+    #     logs_dir.mkdir(exist_ok=True)
+    #     skipped_log_path = logs_dir / "skipped_files.txt"
+    #     with skipped_log_path.open("w", encoding="utf-8") as f:
+    #         for fname, reason in skipped_files:
+    #             f.write(f"{fname}: {reason}\n")
+    #     logging.info(f"Details of skipped files written to {skipped_log_path.resolve()}")
+    #     logging.info(f"Skipped {len(skipped_files)} files due to unexpected structure or errors:")
+    #     for fname, reason in skipped_files:
+    #         logging.info(f"  - {fname}: {reason}")
 
-    num_advisors = len([d for d in data_dir.iterdir() if d.is_dir() and any(f.suffix == '.json' for f in d.iterdir())]) # Count advisor dirs with json files inside
+    if skipped_files:
+        # Use an absolute path where you expect to see the logs (adjust as needed)
+        logs_dir = Path("/app/output/logs")
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        skipped_log_path = logs_dir / "skipped_files.txt"
+        with skipped_log_path.open("w", encoding="utf-8") as f:
+            for fname, reason in skipped_files:
+                f.write(f"{fname}: {reason}\n")
+        logging.info(f"Details of skipped files written to {skipped_log_path.resolve()}")
+        logging.info(f"Skipped {len(skipped_files)} files due to unexpected structure or errors:")
+        for fname, reason in skipped_files:
+            logging.info(f"  - {fname}: {reason}")
+    
+    num_advisors = len([d for d in data_dir.iterdir() if d.is_dir() and any(f.suffix == '.json' for f in d.iterdir())])
     num_clients = len(set(client_conversations.keys()))
+
+    # Compute conversation length statistics.
+    if conversation_lengths:
+        min_length = min(conversation_lengths)
+        max_length = max(conversation_lengths)
+        avg_length = sum(conversation_lengths) / len(conversation_lengths)
+        med_length = statistics.median(conversation_lengths)
+    else:
+        min_length = max_length = avg_length = med_length = 0
+
+    # Compute company mention statistics.
+    total_company_mentions = sum(overall_company_mentions.values())
+    if company_mentions_per_conversation:
+        avg_mentions = sum(company_mentions_per_conversation) / len(company_mentions_per_conversation)
+    else:
+        avg_mentions = 0
 
     metrics = {
         'total_conversations': total_conversations,
-        'processed_json_files': processed_files, # Add count of JSON files actually processed
+        'processed_json_files': processed_files,
         'num_advisors': num_advisors,
         'num_clients': num_clients,
         'advisor_conversations': dict(advisor_conversations),
         'client_conversations': dict(client_conversations),
         'top_topics': topic_counter.most_common(10),
-        'top_categories': category_counter.most_common(10)
+        'top_categories': category_counter.most_common(10),
+        # Conversation length metrics:
+        'conversation_lengths': conversation_lengths,
+        'min_conversation_length': min_length,
+        'max_conversation_length': max_length,
+        'avg_conversation_length': avg_length,
+        'med_conversation_length': med_length,
+        # Company mention metrics:
+        'total_company_mentions': total_company_mentions,
+        'avg_company_mentions_per_conversation': avg_mentions,
+        'top_company_mentions': overall_company_mentions.most_common(5)
     }
+    
     return metrics
 
+
+
+# def display_metrics(metrics, is_repository_analysis=False):
+#     analysis_type = "Synthetic Data Repository" if is_repository_analysis else "Synthetic Data Generation Run"
+#     print(f"\n=== {analysis_type} Analytics ===\n")
+#     print(f"Total Number of Conversations: {metrics['total_conversations']}")
+#     print(f"Total JSON Files Processed: {metrics['processed_json_files']}\n")
+    
+#     print("Conversations per Advisor:")
+#     advisor_df = pd.DataFrame.from_dict(metrics['advisor_conversations'], orient='index', columns=['Conversations'])
+#     advisor_df = advisor_df.sort_values(by='Conversations', ascending=False)
+#     print(advisor_df, "\n")
+    
+#     print("Conversations per Client:")
+#     client_df = pd.DataFrame.from_dict(metrics['client_conversations'], orient='index', columns=['Conversations'])
+#     client_df = client_df.sort_values(by='Conversations', ascending=False)
+#     print(client_df, "\n")
+    
+#     print(f"Total Advisors (Channels): {metrics['num_advisors']}")
+#     print(f"Total Clients: {metrics['num_clients']}\n")
+    
+#     print("Top 10 Topics:")
+#     topic_df = pd.DataFrame(metrics['top_topics'], columns=['Topic', 'Count'])
+#     print(topic_df, "\n")
+    
+#     print("Top 10 Categories:")
+#     category_df = pd.DataFrame(metrics['top_categories'], columns=['Category', 'Count'])
+#     print(category_df, "\n")
+    
+#     # New metrics display
+#     print("Conversation Length Distribution:")
+#     print(f"  Min: {metrics['min_conversation_length']}, Max: {metrics['max_conversation_length']}, Average: {metrics['avg_conversation_length']:.2f}, Median: {metrics['med_conversation_length']}\n")
+    
+#     print("Company Mentions:")
+#     print(f"  Total Mentions: {metrics['total_company_mentions']}")
+#     print(f"  Average Mentions per Conversation: {metrics['avg_company_mentions_per_conversation']:.2f}")
+#     print("  Top 5 Company Mentions:")
+#     for company, count in metrics['top_company_mentions']:
+#         print(f"    {company}: {count}")
+    
+#     print(f"\n=== End of {analysis_type} Analytics ===\n")
+
 def display_metrics(metrics, is_repository_analysis=False):
-    """
-    Displays the metrics on the console.
-
-    Parameters:
-    - metrics (dict): Dictionary containing all the computed metrics.
-    - is_repository_analysis (bool): Flag to indicate if it's repository-wide metrics.
-    """
     analysis_type = "Synthetic Data Repository" if is_repository_analysis else "Synthetic Data Generation Run"
-
     print(f"\n=== {analysis_type} Analytics ===\n")
-    print(f"Total Number of Conversations Analyzed: {metrics['total_conversations']}")
-    print(f"Total JSON files Processed: {metrics['processed_json_files']}\n") # Show processed file count for debug
-
-    print("Number of Conversations per Advisor:")
+    print(f"Total Number of Conversations: {metrics['total_conversations']}")
+    print(f"Total JSON Files Processed: {metrics['processed_json_files']}\n")
+    
+    print("Conversations per Advisor:")
     advisor_df = pd.DataFrame.from_dict(metrics['advisor_conversations'], orient='index', columns=['Conversations'])
     advisor_df = advisor_df.sort_values(by='Conversations', ascending=False)
-    print(advisor_df)
-    print("\n")
-
-    print("Number of Conversations per Client:")
+    print(advisor_df, "\n")
+    
+    print("Conversations per Client:")
     client_df = pd.DataFrame.from_dict(metrics['client_conversations'], orient='index', columns=['Conversations'])
     client_df = client_df.sort_values(by='Conversations', ascending=False)
-    print(client_df)
-    print("\n")
-
-    print(f"Total Number of Advisors (Channels) with Data: {metrics['num_advisors']}\n") # Updated descriptor
+    print(client_df, "\n")
+    
+    print(f"Total Number of Advisors (Channels): {metrics['num_advisors']}")
     print(f"Total Number of Clients: {metrics['num_clients']}\n")
-
-    print("Top 10 Conversation Types (Topics):") # Updated descriptor
+    
+    print("Top 10 Topics:")
     topic_df = pd.DataFrame(metrics['top_topics'], columns=['Topic', 'Count'])
-    print(topic_df)
-    print("\n")
-
-    print("Top 10 Categories (General):") # Updated descriptor
+    print(topic_df, "\n")
+    
+    print("Top 10 Categories:")
     category_df = pd.DataFrame(metrics['top_categories'], columns=['Category', 'Count'])
-    print(category_df)
-    print("\n")
+    print(category_df, "\n")
+    
+    # Display conversation length metrics
+    print("Conversation Length Distribution:")
+    print(f"  Min: {metrics.get('min_conversation_length', 0)}, "
+          f"Max: {metrics.get('max_conversation_length', 0)}, "
+          f"Average: {metrics.get('avg_conversation_length', 0):.2f}, "
+          f"Median: {metrics.get('med_conversation_length', 0)}\n")
+    
+    # Display company mention metrics
+    print("Company Mentions:")
+    print(f"  Total Mentions: {metrics.get('total_company_mentions', 0)}")
+    print(f"  Average Mentions per Conversation: {metrics.get('avg_company_mentions_per_conversation', 0):.2f}")
+    print("  Top 5 Company Mentions:")
+    for company, count in metrics.get('top_company_mentions', []):
+        print(f"    {company}: {count}")
+    
+    print(f"\n=== End of {analysis_type} Analytics ===\n")
 
-    print(f"=== End of {analysis_type} Analytics ===\n")
 
 def log_metrics(run_id, metadata, metrics, csv_file='metrics_log.csv', is_repository_analysis=False):
-    """
-    Logs the metrics to a CSV file, differentiating between run and repository metrics.
-
-    Parameters:
-    - run_id (str): Unique identifier for the run (or 'repository' for repo metrics).
-    - metadata (str): Additional metadata for the run (or 'repository_analysis' for repo metrics).
-    - metrics (dict): Dictionary containing all the computed metrics.
-    - csv_file (str): Path to the CSV file for logging metrics.
-    - is_repository_analysis (bool): Flag to differentiate repository metrics.
-    """
     log_type = "repository_metrics" if is_repository_analysis else "run_metrics"
-    run_identifier = run_id if run_id else "repository_analysis" # Use 'repository_analysis' for repo metrics
+    run_identifier = run_id if run_id else "repository_analysis"
 
-    # Prepare data for logging
     log_entry = {
-        'type': log_type, # Add type to differentiate run vs repo metrics
-        'run_id': run_identifier, # Use run_id or 'repository_analysis'
-        'metadata': metadata if metadata else "repository_analysis", # Use metadata or 'repository_analysis'
+        'type': log_type,
+        'run_id': run_identifier,
+        'metadata': metadata if metadata else "repository_analysis",
         'timestamp': datetime.utcnow().isoformat() + "Z",
         'total_conversations': metrics['total_conversations'],
-        'processed_json_files': metrics['processed_json_files'], # Log processed json files
+        'processed_json_files': metrics['processed_json_files'],
         'num_advisors': metrics['num_advisors'],
-        'num_clients': metrics['num_clients']
+        'num_clients': metrics['num_clients'],
+        # New fields for conversation lengths
+        'min_conversation_length': metrics['min_conversation_length'],
+        'max_conversation_length': metrics['max_conversation_length'],
+        'avg_conversation_length': metrics['avg_conversation_length'],
+        'med_conversation_length': metrics['med_conversation_length'],
+        # New fields for company mentions
+        'total_company_mentions': metrics['total_company_mentions'],
+        'avg_company_mentions_per_conversation': metrics['avg_company_mentions_per_conversation']
     }
-
-    # Flatten and log advisor conversations
+    
     for advisor, count in metrics['advisor_conversations'].items():
-        key = f'advisor_{advisor.replace(" ", "_")}_conversations' # Sanitize advisor name for CSV
+        key = f'advisor_{advisor.replace(" ", "_")}_conversations'
         log_entry[key] = count
 
-    # Flatten and log client conversations
     for client, count in metrics['client_conversations'].items():
-        key = f'client_{client.replace(" ", "_")}_conversations' # Sanitize client name
+        key = f'client_{client.replace(" ", "_")}_conversations'
         log_entry[key] = count
 
-    # Flatten top_topics
     for i, (topic, count) in enumerate(metrics['top_topics'], start=1):
-        key = f'top_topic_{i}'.replace(" ", "_") # Sanitize topic name
-        log_entry[key] = topic
+        log_entry[f'top_topic_{i}'] = topic
         log_entry[f'top_topic_{i}_count'] = count
 
-    # Flatten top_categories
     for i, (category, count) in enumerate(metrics['top_categories'], start=1):
-        key = f'top_category_{i}'.replace(" ", "_") # Sanitize category name
-        log_entry[key] = category
+        log_entry[f'top_category_{i}'] = category
         log_entry[f'top_category_{i}_count'] = count
 
-    csv_file_name = csv_file if not is_repository_analysis else 'repository_metrics_log.csv' # Separate log file for repo metrics
+    # Also log top company mentions
+    for i, (company, count) in enumerate(metrics['top_company_mentions'], start=1):
+        log_entry[f'top_company_{i}'] = company
+        log_entry[f'top_company_{i}_count'] = count
+
+    csv_file_name = csv_file if not is_repository_analysis else 'repository_metrics_log.csv'
     file_exists = Path(csv_file_name).is_file()
     df = pd.DataFrame([log_entry])
-
+    
     try:
         if not file_exists:
             df.to_csv(csv_file_name, index=False)
@@ -404,18 +849,21 @@ def main():
         print("Analyzing metrics for the entire synthetic data repository...")
         metrics = analyze_data(DATA_DIR, is_repository_analysis=True)
         display_metrics(metrics, is_repository_analysis=True)
-        log_metrics('repository', 'repository_analysis', metrics, is_repository_analysis=True) # Consistent log parameters
-
+        log_metrics('repository', 'repository_analysis', metrics, is_repository_analysis=True)
     elif run_id:
-        RUN_DATA_DIR = DATA_DIR / run_id # Run-specific data directory
+        RUN_DATA_DIR = DATA_DIR / run_id
         if not RUN_DATA_DIR.exists() or not RUN_DATA_DIR.is_dir():
             print(f"Error: Run directory not found: {RUN_DATA_DIR}. Please provide a valid --run_id.")
+            print("Available run directories in", DATA_DIR, "are:")
+            for d in DATA_DIR.iterdir():
+                if d.is_dir():
+                    print(" -", d.name)
             return
 
         print(f"Analyzing metrics for run: {run_id}...")
-        metrics = analyze_data(RUN_DATA_DIR) # Analyze run-specific dir
+        metrics = analyze_data(RUN_DATA_DIR)
         display_metrics(metrics)
-        log_metrics(run_id, metadata, metrics) # Log run-specific metrics
+        log_metrics(run_id, metadata, metrics)
     else:
         print("Error: Please provide either --run_id for a specific run or --repo_metrics for repository analysis.")
         return
