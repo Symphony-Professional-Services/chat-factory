@@ -1,84 +1,74 @@
 {
   "Small Talk": [
-    "Weekend Plans",
-    "Recent Sporting Events",
-    "Current Weather Conditions",
-    "Local News and Events",
-    "Personal Updates and Family",
-    "Hobbies and Interests"
+    "Weekend Activities",
+    "Sports Events",
+    "Weather",
+    "Local Happenings",
+    "Personal Updates"
   ],
   "Market Commentary": [
-    "Recent Market Performance",
-    "Analysis of Interest Rate Changes",
-    "Discussion of Inflation Trends",
-    "Emerging Market Trends",
-    "Global Economic Outlook",
-    "Impact of Regulatory Updates",
-    "Sector-Specific Performance"
+    "Market Volatility",
+    "Interest Rates",
+    "Inflation",
+    "Market Trends",
+    "Economic Outlook",
+    "Regulatory Changes"
   ],
   "Client Personal Concerns": [
-    "Review of Personal Financial Goals",
-    "Discussion of Recent Life Events (e.g., marriage, birth)",
-    "Updates on Health and Well-being",
-    "Changes in Employment Status",
-    "Family Financial Matters",
-    "Adjustments Due to Personal Circumstances",
-    "Concerns about Financial Security"
+    "Personal Financial Situation",
+    "Life Events",
+    "Health Concerns",
+    "Job Changes",
+    "Family Matters",
+    "Changes in Personal Circumstances"
   ],
   "Product & Service Inquiry": {
     "Investment Products": [
-      "Inquiries about Specific Stocks",
-      "Questions about Bond Investments",
-      "Information on Exchange-Traded Funds (ETFs)",
-      "Details on Mutual Fund Options",
-      "Interest in Real Estate Investments",
-      "Exploring Alternative Investment Opportunities",
-      "Understanding Annuities",
-      "Questions about Options and Derivatives"
+      "Stocks",
+      "Bonds",
+      "ETFs",
+      "Mutual Funds",
+      "Real Estate Investments",
+      "Alternative Investments"
     ],
     "Financial Services": [
-      "Overview of Wealth Management Services",
-      "Inquiries about Financial Planning Services",
-      "Questions about Retirement Account Options (401k, IRA)",
-      "Information on Estate Planning Services (Wills, Trusts)",
-      "Understanding Tax Planning Services",
-      "Inquiries about Insurance Products (Life, Health)",
-      "Guidance on Portfolio Management",
-      "Explanation of Financial Advisory Fees"
+      "Wealth Management",
+      "Financial Planning Services",
+      "Retirement Accounts",
+      "Estate Planning Services",
+      "Tax Planning Services",
+      "Insurance Services"
     ]
   },
   "Business/Advisory": {
     "Financial Goals & Planning": [
-      "Planning for Retirement Income",
-      "Setting and Reviewing Investment Goals",
-      "Strategies for Education Funding",
-      "Developing an Estate Plan",
-      "Planning for Major Purchases (e.g., home, car)",
-      "Guidance on Debt Management",
-      "Building and Maintaining an Emergency Fund",
-      "Comprehensive Review of Current Financial Situation",
-      "Assessing and Adjusting Insurance Coverage",
-      "Strategies for Tax Optimization",
-      "Reviewing Investment Portfolio Performance",
-      "Creating a Budget and Savings Plan"
+      "Retirement Goals",
+      "Investment Goals",
+      "Education Planning",
+      "Estate Planning",
+      "Major Purchases",
+      "Debt Management",
+      "Emergency Funds",
+      "Financial Situation & Review",
+      "Insurance Coverage",
+      "Tax Planning",
+      "Investment Performance"
     ],
     "Ultra High Net Worth Specifics": [
-      "Strategies for Wealth Preservation and Transfer",
-      "Discussion of Complex Investment Vehicles (e.g., hedge funds, private equity)",
-      "Planning for Business Succession",
-      "Managing Concentrated Stock Positions",
-      "Considerations for Reputation and Privacy Management",
-      "Navigating Legal and Regulatory Compliance for High Net Worth Individuals",
-      "Establishing Family Governance Structures",
-      "Guidance on Lifestyle Management and Philanthropy"
+      "Wealth Preservation",
+      "Complex Investments",
+      "Business Succession Planning",
+      "Concentrated Positions",
+      "Reputation Management",
+      "Legal and Regulatory Compliance",
+      "Family Governance",
+      "Lifestyle Management"
     ],
     "Other Important Topics": [
-      "Understanding and Managing Investment Risk",
-      "Analysis of the Current Economic Outlook and its Impact",
-      "Providing Financial Education and Literacy",
-      "Addressing Significant Changes in Personal Circumstances (e.g., inheritance, divorce)",
-      "Discussing Philanthropic Giving Strategies",
-      "Reviewing Beneficiary Designations"
+      "Risk Management",
+      "Economic Outlook",
+      "Financial Education",
+      "Changes in Personal Circumstances"
     ]
   }
 }

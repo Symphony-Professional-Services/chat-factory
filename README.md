@@ -77,3 +77,16 @@ NEED TO MAKE IT MORE FLEXIBLE AND MODULAR - GET DAG DESIGN OF CODE
 
 ### Post - Processing : company tagging
 - post_processing_add_company_entities.py
+
+
+
+
+##### TODO:
+
+1. Resolve issue where output data is only using parent topic (and not using the subtopics - this is for the messaging analytics use case (not company tagging))
+2. Resolve issue with topics being selected using distribution (make sure that's how it is done)
+3. Increase time length of data so it can be greater than 3 months
+4. Add in extremes (very high and low message count/topic count) [identify client/fa pairs for extrems in config and also topics to set as extremes]
+5. Random selection noisy topic/conversation (super sub topic or something random)
+6. Add sentiment configuration on topic and a conversation level
+7. Clean up repo and make the processing much better

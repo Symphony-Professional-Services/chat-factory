@@ -1,8 +1,33 @@
-
 # # Google Cloud Configuration
-# PROJECT_ID = "PROJECT ID"
-# LOCATION = "LOCATION"  
+# PROJECT_ID = "sk-ml-inference"
+# LOCATION = "us-central1"  
 # MODEL_NAME = "gemini-1.5-flash-002"  
+
+# PERSONAS = [
+#     "Sell-side Analyst",
+#     "Buy-side Analyst",
+#     "Portfolio Manager",    
+#     "Research Analyst"
+# ]
+
+# CONVERSATION_TYPES = [
+#     "Trade discussions",
+#     "Deal negotiations",
+#     "Stock analysis",
+#     "Market updates",
+#     "News on specific companies",
+#     "Earnings reports discussions"
+# ]
+
+# MESSAGE_FORMATS = {
+#     "Trade discussions": "informal",
+#     "Deal negotiations": "informal",
+#     "Stock analysis": "formal",
+#     "Market updates": "formal",
+#     "News on specific companies": "formal",
+#     "Earnings reports discussions": "formal"
+# }
+
 
 # # Input Configuration
 # TAXONOMY_FILE = "taxonomy.json"
@@ -21,7 +46,7 @@
 # JSON_VERSION = "2"
 
 # # Chat Generation Configuration
-# NUM_CONVERSATIONS = 500  # Total number of conversations to generate
+# NUM_CONVERSATIONS = 10  # Total number of conversations to generate
 # MIN_MESSAGES = 2
 # MAX_MESSAGES = 15
 
@@ -31,72 +56,92 @@
 # # Logging Configuration
 # LOG_FILE = "synthetic_chat_generator.log"
 
+### CONFIG V2
+import os
 
 # Google Cloud Configuration
-PROJECT_ID = "sym-professional-services"  # Replace with your actual project ID
-LOCATION = "us-central1"  # Example location, adjust as needed
+PROJECT_ID = "sk-ml-inference"
+LOCATION = "us-central1"
 MODEL_NAME = "gemini-1.5-flash-002"
 
+TEMPERATURE = 0.3 # .2
+TOP_P = 1
+TOP_K = 40 #32
+
 # Input Configuration
-TAXONOMY_FILE = "taxonomy.json"
-# Advisor Configuration
-NUM_ADVISORS = 200
-MIN_ADVISORS = 20
-MAX_ADVISORS = 50  # Based on the average range
-ADVISOR_NAMES_FILE = "advisor_names.txt"  # Consider using a file for a larger list
-# Client Configuration
-AVG_CLIENTS_PER_ADVISOR = 10
-MIN_CLIENTS_PER_ADVISOR = 15
-MAX_CLIENTS_PER_ADVISOR = 20
-CLIENT_NAMES_FILE = "client_names.txt"  # Consider using a file for a larger list
+TAXONOMY_FILE = "taxonomy.json" # Use taxonomy.json from root for financial advisor conversations or from taxonomies dir for company tagging
+ADVISOR_NAMES = [
+    "Alice Johnson", "Bob Smith", "Carol Williams", "David Brown",
+    "Eve Davis", "Frank Miller", "Grace Wilson", "Hank Moore",
+    "Ivy Taylor", "Jack Anderson"
+]
+CLIENT_NAMES = [
+    "Allen", "Betty", "Charles", "Diana", "Edward",
+    "Fiona", "George", "Hannah", "Ian", "Julia"
+]
 
-# Time Dimension Configuration
-CONVERSATION_SPAN_WEEKS = 4  # Minimum 4 weeks
-WEEKEND_FREQUENCY_MULTIPLIER = 0.5  # Reduce frequency on weekends by half
-WORKING_HOURS_START = 9
-WORKING_HOURS_END = 17  # 5 PM (17:00 in 24-hour format)
-AFTER_HOURS_FREQUENCY_REDUCTION = 0.25  # Reduce frequency to 25% after hours
+# -------- NEW CONFIGURATION FOR COMPANY TAGGING DATASET --------
+# Updated Financial Advisory Configuration
+PERSONAS = [
+    "Senior Wealth Advisor",
+    "Investment Portfolio Manager",
+    "Retirement Planning Specialist",
+    "Private Banking Client",
+    "High-Net-Worth Investor"
+]
 
-# Conversation Frequency Configuration
-AVG_MESSAGES_PER_DAY_PER_ADVISOR_PER_CLIENT = 45
-CLIENT_INTERACTION_PROBABILITY = {
-    "high": 0.8,  # Example: 80% chance of interaction weekly for high-touch
-    "medium": 0.5, # Example: 50% chance of interaction monthly for medium-touch
-    "low": 0.2     # Example: 20% chance of interaction quarterly for low-touch
+CONVERSATION_TYPES = [
+    # Core taxonomy categories
+    "Small Talk",
+    "Market Commentary",
+    "Client Personal Concerns",
+    "Product & Service Inquiry",
+    "Business/Advisory",
+]
+
+MESSAGE_FORMATS = {
+    "Small Talk": "informal",
+    "Market Commentary": "structured",
+    "Client Personal Concerns": "confidential",
+    "Product & Service Inquiry": "formal",
+    "Business/Advisory": "formal",
+    "Financial Goals & Planning": "formal"
 }
-PROBABILITY_CLIENT_INITIATES = 0.7  # Example: 70% chance client initiates
 
-# Conversation Content Configuration
-BASE_TOPICS = {
-    "Small Talk": 0.15,  # Example base probability
-    "Market Commentary": 0.20,
-    "Client Personal Concerns": 0.10,
-    "Product & Service Inquiry": 0.25,
-    "Business/Advisory": 0.30
+# Path to the company data CSV file (NEEDED IF COMPANY_TARGETING is enabled)
+COMPANY_DATA_FILE = ""
+
+# Company targeting configuration
+COMPANY_TARGETING = {
+    "enabled": False,  # Set to False to disable company-specific targeting
+    "probability": 0.8,  # Probability of including companies when enabled (0.0-1.0)
+    "min_companies": 1,  # Minimum number of companies to include when targeting is enabled (only used if taxonomy doesn't define company_count_options)
+    "max_companies": 3   # Maximum number of companies to include when targeting is enabled (only used if taxonomy doesn't define company_count_options)
 }
-TRENDING_TOPICS = {
-    "ESG Investing": {"start_date": "2025-03-01", "end_date": "2025-04-30", "probability_boost": 0.1},
-    "Specific Market Event X": {"start_date": "2025-03-15", "end_date": "2025-03-22", "probability_boost": 0.15}
-    # Add more trending topics with their start/end dates and probability boosts
+
+MESSAGE_LENGTH_RATIO = { # Approximate ratio of message lengths (can be adjusted)
+    "short": 0.4,  # 30% short messages
+    "medium": 0.3, # 50% medium messages
+    "long": 0.3   # 20% long messages
 }
-TOPIC_DISTRIBUTION_TYPE = "normal"  # Consider implementing this logic
-CONVERSATION_DEPTH_DISTRIBUTION = "poisson"
-AVG_MESSAGES_PER_CONVERSATION = 5  # Example average for Poisson distribution
-EDGE_CASE_PROBABILITY = 0.5  # 50% chance of a sub-topic conversation
 
-# Language Style Configuration
-ADVISOR_STYLE_PROFILES_FILE = "advisor_styles.json" # File to define different advisor styles
+FEW_SHOT_EXAMPLES_DIR = "few_shot_examples" # Directory to store few-shot example files
 
-# Sentiment Configuration
-SENTIMENT_PROFILES_FILE = "sentiment_profiles.json" # File to define sentiment based on client/topic
+CONVERSATION_MANIFEST_DIR = "conversation_scripts"  # Add this line
+
+# -------- END NEW CONFIGURATION --------
 
 # Output Configuration
 OUTPUT_DIR = "synthetic_data"
-JSON_VERSION = "2"
+JSON_VERSION = "5"
 
 # Chat Generation Configuration
-MIN_MESSAGES_PER_CONVERSATION = 2
-MAX_MESSAGES_PER_CONVERSATION = 20 # Adjust based on Conversation Depth
+NUM_CONVERSATIONS = 20  # Reduced to 100 for initial target as per requirements
+MIN_MESSAGES = 2
+MAX_MESSAGES = 10
+
+# Topic Distribution Configuration
+TOPIC_DISTRIBUTION = "uniform"  # or specify a custom distribution
 
 # Logging Configuration
 LOG_FILE = "synthetic_chat_generator.log"

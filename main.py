@@ -37,9 +37,10 @@ class ChatLine:
 class SingleConversation:
     conversation_id: str
     timestamp: str
-    category: str
-    topic: str
+    category: str  # Top-level category
+    topic: str     # Will now contain "topic.subtopic" if applicable
     lines: List[ChatLine] = field(default_factory=list)
+    company_mentions: List[str] = field(default_factory=list)  # Add company mentions field
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -47,7 +48,8 @@ class SingleConversation:
             "timestamp": self.timestamp,
             "category": self.category,
             "topic": self.topic,
-            "lines": [line.__dict__ for line in self.lines]
+            "lines": [line.__dict__ for line in self.lines],
+            "company_mentions": self.company_mentions  # Include company mentions in output
         }
 
 @dataclass
@@ -86,6 +88,15 @@ class SyntheticChatGenerator:
         self.message_length_ratio = config.MESSAGE_LENGTH_RATIO
         self.few_shot_examples_dir = Path(config.FEW_SHOT_EXAMPLES_DIR)
         self.company_data_file = config.COMPANY_DATA_FILE
+        
+        # Load company targeting configuration
+        self.company_targeting = getattr(config, 'COMPANY_TARGETING', {
+            "enabled": True,
+            "probability": 0.8,
+            "min_companies": 1,
+            "max_companies": 3
+        })
+        logging.info(f"Company targeting configuration: {self.company_targeting}")
 
         self.temperature = config.TEMPERATURE
         self.top_p = config.TOP_P
@@ -94,7 +105,10 @@ class SyntheticChatGenerator:
         self.project_id = config.PROJECT_ID
         self.location = config.LOCATION
         self.model_name = config.MODEL_NAME.lower()
+        
+        # Load taxonomy file - could be either financial advisor or company tagging format
         self.taxonomy_file = config.TAXONOMY_FILE
+        
         self.advisor_names = config.ADVISOR_NAMES  
         self.client_names = config.CLIENT_NAMES      
         self.json_version = config.JSON_VERSION
@@ -103,10 +117,21 @@ class SyntheticChatGenerator:
         self.max_messages = config.MAX_MESSAGES
         self.topic_distribution = config.TOPIC_DISTRIBUTION
 
-        self.taxonomy = self.load_taxonomy()
-        self.flattened_topics = self.flatten_taxonomy(self.taxonomy)
-        self.conversation_type_metadata = self.taxonomy.get("conversation_types", {})
-
+        # Load taxonomy and detect its format
+        self.taxonomy = self._load_taxonomy(self.taxonomy_file)
+        self.taxonomy_format = self.detect_taxonomy_format(self.taxonomy)
+        logging.info(f"Detected taxonomy format: {self.taxonomy_format}")
+        
+        if self.taxonomy_format == "company_tagging":
+            self.flattened_topics = self.flatten_taxonomy(self.taxonomy)
+            # For company tagging, use the conversation type as both category and topic
+            self.conversation_type_metadata = self.taxonomy.get("conversation_types", {})
+            logging.info(f"Loaded {len(self.conversation_type_metadata)} conversation types from company tagging taxonomy")
+        else:  # financial advisor taxonomy format
+            self.flattened_topics = self.flatten_taxonomy(self.taxonomy)  # Now includes subtopics
+            # For financial advisor taxonomy, no conversation type metadata available
+            self.conversation_type_metadata = {}
+        
         # Use provided run_id if given; otherwise, generate a new one.
         if run_id:
             self.run_id = run_id
@@ -138,61 +163,790 @@ class SyntheticChatGenerator:
             fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
             self.manifest_logger.addHandler(fh)
 
-        # self.scripts_logger = logging.getLogger("conversation_scripts")
-        # self.scripts_logger.setLevel(logging.INFO)
-        # if not self.scripts_logger.handlers:
-        #     # Write to an absolute or mapped directory (adjust as needed)
-        #     scripts_log_path = Path("/app/output") / f"conversation_manifest_{self.run_id}.log"
-        #     fh = logging.FileHandler(scripts_log_path)
-        #     fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'))
-        #     self.scripts_logger.addHandler(fh)
-
-    def load_company_data(self) -> List[Dict]:
-        """Loads company data from the CSV file."""
-        company_data: List[Dict] = []
+    def _load_taxonomy(self, taxonomy_file: str, taxonomy_type: str = None) -> Dict[str, Any]:
+        """
+        Load the taxonomy file for the specified type.
+        If taxonomy_type is not specified, it will be determined from the config.
+        """
+        logging.info(f"Loading taxonomy from file: {taxonomy_file}")
+        
         try:
-            with open(self.company_data_file, 'r', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
+            with open(taxonomy_file, 'r') as f:
+                taxonomy = json.load(f)
+            
+            # Validate the taxonomy structure based on the type
+            if not taxonomy:
+                logging.error(f"Empty taxonomy loaded from {taxonomy_file}")
+                return {}
+                
+            logging.info(f"Successfully loaded taxonomy with {len(taxonomy)} top-level categories")
+            
+            # For debugging
+            if "conversation_types" in taxonomy:
+                logging.info(f"Detected company_tagging taxonomy format with {len(taxonomy.get('conversation_types', {}))} conversation types")
+                for conv_type, data in taxonomy.get("conversation_types", {}).items():
+                    if isinstance(data, dict) and "company_count_options" in data:
+                        logging.info(f"  - {conv_type}: company_count_options={data['company_count_options']}")
+            else:
+                # Log the structure of the financial advisor taxonomy
+                for category, items in taxonomy.items():
+                    if isinstance(items, dict):
+                        subcats_count = len(items)
+                        topics_count = sum(len(topics) for topics in items.values() if isinstance(topics, list))
+                        logging.info(f"  - {category}: {subcats_count} subcategories, {topics_count} total topics")
+                    elif isinstance(items, list):
+                        logging.info(f"  - {category}: {len(items)} topics")
+            
+            return taxonomy
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            logging.error(f"Error loading taxonomy file {taxonomy_file}: {e}")
+            return {}
+
+    def load_company_data(self, force_load=False) -> List[Dict]:
+        """
+        Load company data from CSV file.
+        
+        Args:
+            force_load: If True, attempt to load even if company targeting is disabled
+            
+        Returns:
+            List of company data dictionaries
+        """
+        # Skip loading if company targeting is disabled and not force_load
+        if not self.company_targeting.get("enabled", True) and not force_load:
+            logging.info("Company targeting is disabled. Skipping company data loading.")
+            return []
+            
+        # If company data file path is empty, return empty list
+        if not self.company_data_file:
+            logging.warning("Company data file path is empty. Cannot load company data.")
+            return []
+            
+        try:
+            if not os.path.exists(self.company_data_file):
+                logging.error(f"Company data file not found: {self.company_data_file}")
+                return []
+                
+            # Load company data from CSV
+            import csv
+            company_data = []
+            with open(self.company_data_file, 'r') as file:
+                reader = csv.DictReader(file)
                 for row in reader:
-                    # Split comma-separated strings into lists
-                    row['variations'] = [v.strip() for v in row.get('variations', '').split(',') if v.strip()]
-                    row['abbreviations'] = [abbr.strip() for abbr in row.get('abbreviations', '').split(',') if abbr.strip()]
-                    row['misspellings'] = [misspelling.strip() for misspelling in row.get('misspellings', '').split(',') if misspelling.strip()]
                     company_data.append(row)
             logging.info(f"Loaded {len(company_data)} companies from {self.company_data_file}")
-        except FileNotFoundError:
-            logging.error(f"Company data file not found: {self.company_data_file}")
-            raise
+            return company_data
         except Exception as e:
-            logging.error(f"Error loading company data: {e}")
-            raise
-        return company_data
+            logging.error(f"Error loading company data file: {e}")
+            return []
 
-    def load_taxonomy(self) -> Dict[str, Any]:
-        try:
-            with open(self.taxonomy_file, 'r') as f:
-                taxonomy = json.load(f)
-                logging.info(f"Loaded taxonomy from {self.taxonomy_file}.")
-                return taxonomy
-        except Exception as e:
-            logging.error(f"Error loading taxonomy file: {e}")
-            raise
+    def detect_taxonomy_format(self, taxonomy: Dict[str, Any]) -> str:
+        if "conversation_types" in taxonomy:
+            return "company_tagging"
+        else:
+            return "financial_advisor"
 
-    def flatten_taxonomy(self, taxonomy: Dict[str, Any]) -> List[Tuple[str, str]]:
+    def flatten_taxonomy(self, taxonomy: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+        """
+        Flatten the taxonomy structure into a list of tuples.
+        For financial advisor taxonomy: (category, topic, subtopic)
+        For company tagging taxonomy: (conversation_type, conversation_type, "")
+        """
+        logging.info("Flattening taxonomy structure")
         flattened = []
-        for category, subcats in taxonomy.items():
-            if isinstance(subcats, dict):
-                for subcategory, topics in subcats.items():
-                    for topic in topics:
-                        combined_category = f"{category} - {subcategory}"
-                        flattened.append((combined_category, topic))
-            elif isinstance(subcats, list):
-                for topic in subcats:
-                    flattened.append((category, topic))
-            else:
-                logging.warning(f"Unexpected taxonomy structure for category '{category}'.")
-        logging.info(f"Flattened taxonomy into {len(flattened)} topics.")
+        
+        # Check if we have a company tagging taxonomy
+        if self.taxonomy_format == "company_tagging":
+            conversation_types = taxonomy.get("conversation_types", {})
+            for conv_type in conversation_types.keys():
+                # For company tagging, use the conversation type as both category and topic
+                flattened.append((conv_type, conv_type, ""))
+            logging.info(f"Flattened company tagging taxonomy into {len(flattened)} conversation types")
+            return flattened
+        
+        # Financial advisor taxonomy structure processing
+        for category, items in taxonomy.items():
+            if isinstance(items, dict):
+                # Category contains subcategories/topics
+                for topic, subtopics in items.items():
+                    if isinstance(subtopics, list):
+                        # Add each subtopic with full hierarchy
+                        for subtopic in subtopics:
+                            flattened.append((category, topic, subtopic))
+                    else:
+                        # Handle case where a topic has no subtopics
+                        flattened.append((category, topic, ""))
+            elif isinstance(items, list):
+                # Category contains direct topics without subcategories
+                for topic in items:
+                    flattened.append((category, topic, ""))
+        
+        logging.info(f"Flattened financial advisor taxonomy into {len(flattened)} unique topic paths")
+        # Log some sample topics for debugging
+        if flattened:
+            sample_topics = flattened[:3] if len(flattened) > 3 else flattened
+            logging.info(f"Sample topics: {sample_topics}")
+        
         return flattened
+
+    def select_topic(self) -> Tuple[str, str, str]:
+        """
+        Select a random topic from the flattened taxonomy.
+        Returns a tuple of (category, topic, subtopic)
+        """
+        if not self.flattened_topics:
+            logging.warning("No flattened topics available. Using default topic.")
+            return ("General", "General Conversation", "")
+        
+        # Select a random topic
+        category, topic, subtopic = random.choice(self.flattened_topics)
+        
+        logging.info(f"Selected topic: category='{category}', topic='{topic}', subtopic='{subtopic}'")
+        
+        return category, topic, subtopic
+
+    def select_conversation_type(self) -> str:
+        conversation_type = random.choice(self.conversation_types)
+        logging.debug(f"Selected conversation type: {conversation_type}")
+        return conversation_type
+
+    def get_message_format(self, conversation_type: str) -> str:
+        message_format = self.message_formats.get(conversation_type, "formal")
+        logging.debug(f"Message format for {conversation_type}: {message_format}")
+        return message_format
+
+    def select_persona(self) -> str:
+        """
+        Randomly select a persona from the available personas.
+        """
+        if not self.personas:
+            logging.warning("No personas available, using default")
+            return "Financial Advisor"
+        return random.choice(self.personas)
+
+    def select_advisors_clients(self) -> Tuple[str, str]:
+        advisor = random.choice(self.advisor_names)
+        client = random.choice(self.client_names)
+        logging.debug(f"Selected advisor-client pair: {advisor} - {client}")
+        return advisor, client
+
+    def assign_random_attributes(self) -> Tuple[int, str]:
+        age = random.randint(30, 60)
+        communication_style = random.choice([
+            "Professional yet approachable",
+            "Analytical and detailed",
+            "Friendly and engaging",
+            "Straightforward and pragmatic",
+            "Calm and reassuring",
+            "Energetic and enthusiastic",
+            "Assertive and confident",
+            "Informal yet professional",
+            "Direct and inquisitive",
+            "Casual but focused",
+            "Strategic and decisive",
+            "Compassionate and thoughtful",
+            "Innovative and forward-thinking",
+            "Pragmatic and detail-oriented",
+            "Analytical and thorough",
+            "Energetic and engaging"
+        ])
+        return age, communication_style
+
+    async def call_vertex_ai(self, prompt: str, max_retries: int = 10, initial_backoff: float = 1.0, max_backoff: float = 32.0) -> str:
+        """
+        Call Vertex AI with exponential backoff retry logic for handling rate limits (429 errors).
+        
+        Args:
+            prompt: The prompt to send to the LLM
+            max_retries: Maximum number of retry attempts
+            initial_backoff: Initial backoff time in seconds
+            max_backoff: Maximum backoff time in seconds
+            
+        Returns:
+            The text response from the LLM or empty string on failure
+        """
+        backoff = initial_backoff
+        attempt = 0
+        
+        while attempt <= max_retries:
+            try:
+                attempt += 1
+                generation_config = GenerationConfig(
+                    max_output_tokens=1200,
+                    temperature=self.temperature,
+                    top_p=self.top_p,
+                    top_k=self.top_k
+                )
+                
+                if attempt > 1:
+                    logging.info(f"Vertex AI API call attempt {attempt}/{max_retries+1}")
+                
+                response = await self.llm.generate_content_async(
+                    contents=[prompt],
+                    generation_config=generation_config,
+                    stream=False
+                )
+                raw_response = response.candidates[0].content.text.strip()
+                logging.debug(f"Raw LLM Response: {raw_response}")
+                return raw_response
+                
+            except Exception as e:
+                error_message = str(e)
+                
+                # Check if this is a rate limit error (429)
+                if "429" in error_message or "quota" in error_message.lower() or "rate limit" in error_message.lower():
+                    if attempt <= max_retries:
+                        # Calculate backoff with jitter (up to 25% randomness)
+                        jitter = random.uniform(0, 0.25 * backoff)
+                        sleep_time = backoff + jitter
+                        
+                        logging.warning(f"Rate limit (429) hit. Retrying in {sleep_time:.2f} seconds (attempt {attempt}/{max_retries+1})")
+                        await asyncio.sleep(sleep_time)
+                        
+                        # Exponential backoff with truncation
+                        backoff = min(backoff * 2, max_backoff)
+                    else:
+                        logging.error(f"Maximum retry attempts ({max_retries+1}) reached for rate limit errors.")
+                        return ""
+                else:
+                    # For non-rate-limit errors, log and return immediately
+                    logging.error(f"Error calling Vertex AI: {e}", exc_info=True)
+                    return ""
+        
+        # This point is reached if we've exhausted all retries
+        logging.error(f"Failed to get a response from Vertex AI after {max_retries+1} attempts")
+        return ""
+
+    def get_company_name_variations(self) -> Dict[str, List[str]]:
+        company_variations = {}
+        for company_data_item in self.company_data:
+            company_name = company_data_item['name']
+            variations = company_data_item.get('variations', [])
+            abbreviations = company_data_item.get('abbreviations', [])
+            misspellings = company_data_item.get('misspellings', [])
+            ticker = company_data_item.get('ticker')
+            all_variations = set([company_name] + variations + abbreviations + misspellings)
+            if ticker:
+                all_variations.add(ticker)
+            company_variations[company_name] = list(all_variations)
+        return company_variations
+
+    def select_company_count(self, conversation_type: str) -> int:
+        """
+        Select the number of companies to include in a conversation based on the conversation type.
+        For company_tagging taxonomy, this will use the company_count_options field.
+        Otherwise, it falls back to the global config values.
+        """
+        if not self.company_targeting.get("enabled", False):
+            logging.debug(f"Company targeting disabled by config. Returning 0 companies for {conversation_type}")
+            return 0
+
+        # If we have a company_tagging taxonomy, use the conversation_type_metadata to determine company count
+        if self.taxonomy_format == "company_tagging":
+            conversation_metadata = self.conversation_type_metadata.get(conversation_type, {})
+            company_count_options = conversation_metadata.get("company_count_options", [])
+            
+            if company_count_options:
+                logging.info(f"Found company_count_options for {conversation_type}: {company_count_options}")
+                # Select a random count from the options
+                count = random.choice(company_count_options)
+                logging.info(f"Selected {count} companies for {conversation_type} based on taxonomy values")
+                return count
+        
+        # Fall back to global config if no specific options found
+        min_companies = self.company_targeting.get("min_companies", 1)
+        max_companies = self.company_targeting.get("max_companies", 3)
+        count = random.randint(min_companies, max_companies)
+        logging.info(f"Selected {count} companies for {conversation_type} based on config values")
+        return count
+
+    def create_manifest_blueprint(self, conversation_type: str, num_messages: int, category: str = "", topic: str = "") -> dict:
+        """
+        Create a conversation blueprint for use in prompting. The blueprint is a dictionary
+        containing the details for how the conversation should unfold, including any 
+        key companies that should be discussed.
+        """
+        num_key_companies = self.select_company_count(conversation_type)
+        company_targeting_enabled = num_key_companies > 0
+        
+        # Get conversation flow characteristics based on the conversation type
+        flow_characteristics = {}
+        if self.taxonomy_format == "company_tagging" and conversation_type in self.conversation_type_metadata:
+            conv_meta = self.conversation_type_metadata[conversation_type]
+            flow_characteristics = {
+                "description": conv_meta.get("description", ""),
+                "message_format": conv_meta.get("message_format", "formal"),
+                "message_style": conv_meta.get("message_style", ""),
+                "typical_message_length": conv_meta.get("typical_message_length", "medium")
+            }
+            logging.info(f"Using conversation flow characteristics from company tagging taxonomy for {conversation_type}")
+        else:
+            # Default flow characteristics if not found in taxonomy
+            flow_characteristics = {
+                "message_format": "formal",
+                "message_style": "professional, analytical",
+                "typical_message_length": "medium"
+            }
+            logging.info(f"Using default conversation flow characteristics for {conversation_type}")
+        
+        # Define conversation length based on the number of messages
+        conversation_length = "medium"
+        if num_messages < 8:
+            conversation_length = "short"
+        elif num_messages > 12:
+            conversation_length = "long"
+            
+        # Adjust conversation flow based on whether companies are included
+        if company_targeting_enabled:
+            conversation_flow = [
+                {"speaker": "advisor", "topic": "Initial market overview"},
+                {"speaker": "client", "topic": "Questions about specific companies"},
+                {"speaker": "advisor", "topic": "Analysis of earnings and performance"},
+                {"speaker": "client", "topic": "Follow-up and comparison"}
+            ]
+        else:
+            # Generic conversation flow when no companies are targeted
+            conversation_flow = [
+                {"speaker": "advisor", "topic": "Initial greeting and discussion"},
+                {"speaker": "client", "topic": "General questions or concerns"},
+                {"speaker": "advisor", "topic": "Professional advice or information"},
+                {"speaker": "client", "topic": "Follow-up questions or closing"}
+            ]
+        
+        # Base blueprint with conversation flow characteristics
+        blueprint = {
+            "conversation_type": conversation_type,
+            "num_messages": num_messages,
+            "flow_characteristics": flow_characteristics,
+            "company_targeting_enabled": company_targeting_enabled,
+            "conversation_length": conversation_length,
+            "persona_advisor": self.select_persona(),
+            "persona_client": self.select_persona(),
+            "conversation_flow": conversation_flow,
+            "key_companies": []  # Initialize with empty list by default
+        }
+        
+        # Add category and topic information to the blueprint
+        blueprint["category"] = category
+        blueprint["topic"] = topic
+        
+        # If no companies should be targeted, return the blueprint as is
+        if not company_targeting_enabled:
+            return blueprint
+        
+        # Only attempt to load company data if targeting is enabled
+        company_data = self.load_company_data()
+        if not company_data:
+            logging.warning("No company data available, but company targeting is enabled. Check COMPANY_DATA_FILE setting.")
+            return blueprint
+        
+        # Select n random companies based on the number determined by select_company_count
+        sampled_companies = random.sample(company_data, min(num_key_companies, len(company_data)))
+        
+        # Format the company data properly
+        key_companies = []
+        for company_dict in sampled_companies:
+            # Extract company details correctly
+            official_name = company_dict.get("name", "Unknown")
+            extracted_entity = company_dict.get("formal_name", official_name)
+            ticker = company_dict.get("ticker", "Unknown")
+            
+            key_companies.append({
+                "extracted_entity": extracted_entity,
+                "official_name": official_name,
+                "ticker": ticker
+            })
+        
+        # Add company details to the blueprint
+        blueprint["key_companies"] = key_companies
+        
+        # Log the selected companies
+        company_names = [company.get("official_name", "Unknown") for company in key_companies]
+        logging.info(f"Selected {len(key_companies)} companies for {conversation_type}: {', '.join(company_names)}")
+        
+        return blueprint
+
+    def construct_prompt(
+        self,
+        advisor_name: str,
+        client_name: str,
+        conversation_type: str,
+        num_messages: int,
+        manifest_blueprint: dict
+    ) -> str:
+        """
+        Constructs the prompt for the LLM based on the blueprint.
+        """
+        # Get topic details from the manifest
+        category = manifest_blueprint.get("category", "General")
+        topic_with_subtopic = manifest_blueprint.get("topic", "General Conversation")
+        
+        # Split the topic.subtopic format
+        topic_parts = topic_with_subtopic.split('.')
+        main_topic = topic_parts[0]
+        subtopic = topic_parts[1] if len(topic_parts) > 1 else ""
+        
+        logging.info(f"Constructing prompt with category={category}, main_topic={main_topic}, subtopic={subtopic}")
+
+        # Retrieve the key companies if targeting is enabled
+        company_targeting_enabled = manifest_blueprint.get("company_targeting_enabled", False)
+        key_companies = manifest_blueprint.get("key_companies", [])
+        
+        # Determine message distribution
+        message_length_guidance = self.get_message_length_guidance(num_messages)
+        
+        # Build the system prompt
+        prompt_header = f"""
+You are a helpful assistant that generates realistic simulated conversations. 
+Your task is to create a detailed synthetic conversation between an advisor named {advisor_name} and a client named {client_name}.
+
+This is a {conversation_type} conversation. The conversation should be between {num_messages} messages total.
+"""
+
+        # Add company targeting instructions if enabled
+        if company_targeting_enabled and key_companies:
+            company_names = [company.get("official_name", "") for company in key_companies]
+            prompt_header += f"""
+The conversation should naturally mention the following companies: {', '.join(company_names)}.
+Ensure that these companies are integrated naturally into the conversation topic.
+"""
+
+        # Build the conversation details
+        prompt_body = f"""
+Please generate a realistic conversation with the following details:
+
+Conversation Type: {conversation_type}
+Conversation Category: {category}
+Topic Area: {main_topic}
+"""
+        # Add subtopic if available
+        if subtopic:
+            prompt_body += f"Specific Topic: {subtopic}\n"
+            
+        prompt_body += f"""
+Number of Messages: {num_messages}
+Client: {client_name}
+Advisor: {advisor_name}
+
+Conversation Flow:
+"""
+
+        # Add message length guidance
+        for i, length in enumerate(message_length_guidance):
+            speaker = advisor_name if i % 2 == 0 else client_name
+            speaker_id = "0" if i % 2 == 0 else "1"
+            prompt_body += f"- Message {i+1}: Speaker {speaker_id} ({speaker}), Length: {length}\n"
+
+        # Additional instructions on companies if targeting is enabled
+        if company_targeting_enabled and key_companies:
+            prompt_body += "\nCompany References:\n"
+            for company in key_companies:
+                prompt_body += f"- {company.get('official_name', '')}: {company.get('description', 'No description available')}\n"
+
+        # Add formatting instructions
+        prompt_body += """
+Output the conversation as a JSON object with a 'conversations' array containing messages with 'speaker' and 'text' fields.
+Place the entire JSON within <BEGIN CONVERSATION> and <END CONVERSATION> tags.
+
+<BEGIN CONVERSATION>
+{
+    "conversations": [
+        {
+            "speaker": "0",
+            "text": "Hello, how can I help you today?"
+        },
+        {
+            "speaker": "1",
+            "text": "I'm interested in discussing some investment options."
+        }
+        // more messages...
+    ]
+}
+<END CONVERSATION>
+
+Speakers should be represented by "0" (the advisor) and "1" (the client). Ensure the conversation is realistic, engaging, and adheres to the topic.
+"""
+
+        full_prompt = prompt_header + prompt_body
+        logging.debug(f"Constructed Prompt: {full_prompt}")
+        return full_prompt
+
+    def parse_response(self, response: str, expected_messages: int) -> List[ChatLine]:
+        try:
+            start_tag = "<BEGIN CONVERSATION>"
+            end_tag = "<END CONVERSATION>"
+
+            start = response.find(start_tag)
+            end = response.find(end_tag)
+
+            if start == -1 or end == -1:
+                logging.error(f"Missing conversation tags in the LLM response (in {__file__}:{inspect.currentframe().f_lineno}).")
+                logging.debug(f"Full LLM Response: {response}")
+                return []
+
+            json_str = response[start + len(start_tag):end].strip()
+
+            # If the output starts with an array, wrap it in an object.
+            if json_str.startswith("["):
+                logging.warning(f"LLM returned a JSON array instead of an object (in {__file__}:{inspect.currentframe().f_lineno}). Wrapping array in {{'conversations': ...}}.")
+                data = {"conversations": json.loads(json_str)}
+            elif json_str.startswith("{"):
+                data = json.loads(json_str)
+            else:
+                logging.error(f"Expected a JSON object (starting with '{{') but did not find one (in {__file__}:{inspect.currentframe().f_lineno}).")
+                logging.debug(f"Extracted JSON string: {json_str}")
+                return []
+
+            if not isinstance(data, dict):
+                logging.error(f"Parsed JSON is not an object as expected (in {__file__}:{inspect.currentframe().f_lineno}).")
+                logging.debug(f"Parsed JSON data: {data}")
+                return []
+
+            if "conversations" not in data or not isinstance(data["conversations"], list):
+                logging.error(f"JSON object missing key 'conversations' or it is not a list (in {__file__}:{inspect.currentframe().f_lineno}).")
+                logging.debug(f"Parsed JSON data: {data}")
+                return []
+
+            lines = []
+            for index, message in enumerate(data["conversations"]):
+                if not isinstance(message, dict):
+                    logging.error(f"Message at index {index} is not a dictionary (in {__file__}:{inspect.currentframe().f_lineno}).")
+                    continue
+                if "speaker" not in message or "text" not in message:
+                    logging.error(f"Message at index {index} missing required keys 'speaker' or 'text' (in {__file__}:{inspect.currentframe().f_lineno}).")
+                    continue
+                text = message["text"].encode('utf-8', 'ignore').decode('utf-8')
+                lines.append(ChatLine(speaker=message["speaker"], text=text))
+
+            if len(lines) != expected_messages:
+                logging.warning(f"Expected {expected_messages} messages, but got {len(lines)} (in {__file__}:{inspect.currentframe().f_lineno}).")
+
+            return lines
+
+        except json.JSONDecodeError as e:
+            logging.exception(f"JSON decoding error while parsing LLM response (in {__file__}:{inspect.currentframe().f_lineno}): {e}")
+            logging.debug(f"Malformed JSON: {response}")
+            return []
+        except Exception as e:
+            logging.exception(f"Unexpected error while parsing LLM response (in {__file__}:{inspect.currentframe().f_lineno}): {e}")
+            logging.debug(f"Response content: {response}")
+            return []
+
+    async def process_conversation(
+        self,
+        conv_number: int,
+        conversation_type: str,
+        advisor_name: str,
+        client_name: str,
+        num_messages: int
+    ) -> SingleConversation:
+        """
+        Processes and buffers a single conversation.
+        """
+        try:
+            timestamp = datetime.now().isoformat()
+            category, topic, subtopic = self.select_topic()
+            conversation_id = f"{self.run_id}_{conv_number}_{uuid.uuid4().hex[:8]}"
+
+            # Format the topic in the desired format
+            formatted_topic = f"{topic}.{subtopic}" if subtopic else topic
+
+            # Create the manifest blueprint with company targeting awareness
+            manifest_blueprint = self.create_manifest_blueprint(
+                conversation_type, 
+                num_messages,
+                category=category,
+                topic=formatted_topic
+            )
+            
+            # Log whether company targeting is enabled for this conversation
+            company_targeting_enabled = manifest_blueprint.get("company_targeting_enabled", False)
+            num_companies = len(manifest_blueprint.get("key_companies", []))
+            logging.info(f"Conversation {conv_number}: Company targeting {'enabled' if company_targeting_enabled else 'disabled'}, {num_companies} companies included")
+
+            # Generate conversation using the blueprint
+            prompt = self.construct_prompt(advisor_name, client_name, conversation_type, num_messages, manifest_blueprint)
+            response = await self.call_vertex_ai(prompt)
+            
+            # Parse the response to get chat lines
+            chat_lines = self.parse_response(response, num_messages)
+            
+            # Create the conversation object with proper ChatLine objects
+            conversation = SingleConversation(
+                conversation_id=conversation_id,
+                timestamp=timestamp,
+                category=category,
+                topic=formatted_topic,
+                lines=chat_lines,  # These are already ChatLine objects
+                company_mentions=[]  # Add empty company mentions list
+            )
+
+            # [DEBUG] Log conversation details to see what's being created
+            logging.info(f"DEBUG: Created conversation object {conversation_id} with {len(chat_lines)} lines, topic: {formatted_topic}")
+            
+            # Log the manifest
+            manifest_log = {
+                "conversation_id": conversation_id,
+                "type": conversation_type,
+                "timestamp": timestamp,
+                "category": category,
+                "topic": formatted_topic,
+                "advisor": advisor_name,
+                "client": client_name,
+                "num_messages": len(chat_lines),
+                "manifest": manifest_blueprint
+            }
+            
+            self.manifest_logger.info(json.dumps(manifest_log))
+            
+            # [DEBUG] Print details of the conversation to help debugging
+            print(f"DEBUG: Generated conversation {conversation_id} for {advisor_name}-{client_name} with {len(chat_lines)} messages")
+            
+            return conversation
+            
+        except Exception as e:
+            logging.error(f"Error processing conversation {conv_number}: {e}", exc_info=True)
+            print(f"DEBUG ERROR: Failed to process conversation {conv_number}: {str(e)}")
+            # Return empty conversation on error
+            return SingleConversation(
+                conversation_id=f"{self.run_id}_{conv_number}_error",
+                timestamp=datetime.now().isoformat(),
+                category="Error",
+                topic="Error",
+                lines=[],
+                company_mentions=[]  # Add empty company mentions list
+            )
+
+    async def generate_synthetic_data(self):
+        """
+        Generate and save synthetic conversations.
+        """
+        # Initialize the conversation buffer at the beginning of each generation
+        self.conversation_buffer = {}
+        print(f"DEBUG: Initialized empty conversation buffer")
+        
+        tasks = []
+        conversation_metadata = []  # Track advisor/client pairs for each conversation
+        
+        # Create all the conversation generation tasks and track metadata
+        for i in range(1, self.num_conversations + 1):
+            conversation_type = self.select_conversation_type()
+            advisor, client = self.select_advisors_clients()
+            num_messages = random.randint(self.min_messages, self.max_messages)
+            
+            # Store metadata for this conversation
+            conversation_metadata.append({
+                "index": i,
+                "advisor": advisor,
+                "client": client,
+                "type": conversation_type,
+                "messages": num_messages
+            })
+            
+            # Create task
+            tasks.append(self.process_conversation(i, conversation_type, advisor, client, num_messages))
+        
+        # [DEBUG] Log that we're starting to gather results
+        print(f"DEBUG: Starting to gather {len(tasks)} conversation generation tasks")
+        
+        # Wait for all conversation generation to complete
+        conversations = await asyncio.gather(*tasks)
+        
+        # [DEBUG] Log details about the conversations generated
+        valid_conversations = [c for c in conversations if c.conversation_id and not c.conversation_id.endswith("_error")]
+        print(f"DEBUG: Generated {len(valid_conversations)} valid conversations out of {len(conversations)} total")
+        
+        # [DEBUG] Check if the buffer already has entries before processing
+        print(f"DEBUG: Conversation buffer has {len(self.conversation_buffer)} entries before processing new conversations")
+        
+        # Add conversations to the buffer using the metadata we tracked
+        buffer_additions = 0
+        for i, conversation in enumerate(conversations):
+            if i < len(conversation_metadata) and conversation.conversation_id and not conversation.conversation_id.endswith("_error"):
+                # Get the advisor/client from our metadata
+                metadata = conversation_metadata[i]
+                advisor = metadata["advisor"]
+                client = metadata["client"]
+                
+                # Create the buffer key
+                buffer_key = f"{advisor}_{client}"
+                print(f"DEBUG: Processing conversation {i+1} for buffer key '{buffer_key}'")
+                
+                # Initialize buffer entry if needed
+                if buffer_key not in self.conversation_buffer:
+                    print(f"DEBUG: Creating new buffer entry for key '{buffer_key}'")
+                    self.conversation_buffer[buffer_key] = ConversationFile(
+                        version=self.json_version,
+                        advisor=advisor,
+                        client=client,
+                        conversations=[]
+                    )
+                
+                # Add the conversation to the buffer
+                self.conversation_buffer[buffer_key].conversations.append(conversation)
+                buffer_additions += 1
+                print(f"DEBUG: Added conversation {conversation.conversation_id} to buffer with key '{buffer_key}' (buffer now has {len(self.conversation_buffer[buffer_key].conversations)} conversations)")
+        
+        # [DEBUG] Log each buffer entry and how many conversations it contains
+        print(f"DEBUG: Added {buffer_additions} conversations to the buffer across {len(self.conversation_buffer)} entries")
+        print(f"DEBUG: Conversation buffer now has {len(self.conversation_buffer)} entries after processing")
+        for key, conv_file in self.conversation_buffer.items():
+            print(f"DEBUG: Buffer entry '{key}' contains {len(conv_file.conversations)} conversations")
+        
+        # Save all conversations from the buffer
+        for buffer_key, conv_file in self.conversation_buffer.items():
+            try:
+                # Extract advisor and client from the buffer key
+                advisor, client = buffer_key.split("_", 1)
+                
+                print(f"DEBUG: Saving {len(conv_file.conversations)} conversations for {advisor} and {client}")
+                self.save_conversation_file(advisor, client, conv_file)
+                print(f"DEBUG: Successfully saved conversations for {advisor} and {client}")
+            except Exception as e:
+                print(f"DEBUG ERROR: Failed to save conversations for {buffer_key}: {str(e)}")
+                logging.error(f"Failed to save conversations for {buffer_key}: {e}")
+
+    async def generate_conversation(
+        self,
+        advisor_name: str,
+        client_name: str,
+        conversation_type: str,
+        num_messages: int,
+        manifest_blueprint: dict,
+        max_retries: int = 3
+    ) -> SingleConversation:
+        for attempt in range(1, max_retries + 1):
+            try:
+                prompt = self.construct_prompt(advisor_name, client_name, conversation_type, num_messages, manifest_blueprint)
+                logging.debug(f"Constructed Prompt for Conversation: {prompt}")
+                raw_response = await self.call_vertex_ai(prompt)
+                logging.debug(f"Raw LLM Response for Conversation: {raw_response}")
+                if not raw_response:
+                    logging.error("Received empty response from LLM.")
+                    continue
+                lines = self.parse_response(raw_response, num_messages)
+                if not lines:
+                    logging.warning(f"Attempt {attempt}: Parsed conversation lines are empty.")
+                    continue
+                return SingleConversation(
+                    conversation_id="",
+                    timestamp="",
+                    category=conversation_type,
+                    topic=conversation_type,
+                    lines=lines,
+                    company_mentions=[]  # Add empty company mentions list
+                )
+            except Exception as e:
+                logging.error(f"Error generating conversation on attempt {attempt}: {e}", exc_info=True)
+        logging.error(f"Failed to generate a valid conversation after {max_retries} attempts.")
+        return SingleConversation(
+            conversation_id="",
+            timestamp="",
+            category=conversation_type,
+            topic=conversation_type,
+            lines=[],
+            company_mentions=[]  # Add empty company mentions list
+        )
 
     def load_few_shot_examples(self, conversation_type: str, script: Dict = None) -> str:
         """
@@ -318,623 +1072,6 @@ class SyntheticChatGenerator:
         except Exception as e:
             logging.error(f"Error initializing Vertex AI with hardcoded credentials: {e}")
             raise
-
-    def select_conversation_type(self) -> str:
-        conversation_type = random.choice(self.conversation_types)
-        logging.debug(f"Selected conversation type: {conversation_type}")
-        return conversation_type
-
-    def get_message_format(self, conversation_type: str) -> str:
-        message_format = self.message_formats.get(conversation_type, "formal")
-        logging.debug(f"Message format for {conversation_type}: {message_format}")
-        return message_format
-
-    def select_persona(self) -> str:
-        persona = random.choice(self.personas)
-        logging.debug(f"Selected persona: {persona}")
-        return persona
-
-    def select_advisors_clients(self) -> Tuple[str, str]:
-        advisor = random.choice(self.advisor_names)
-        client = random.choice(self.client_names)
-        logging.debug(f"Selected advisor-client pair: {advisor} - {client}")
-        return advisor, client
-
-    def assign_random_attributes(self) -> Tuple[int, str]:
-        age = random.randint(30, 60)
-        communication_style = random.choice([
-            "Professional yet approachable",
-            "Analytical and detailed",
-            "Friendly and engaging",
-            "Straightforward and pragmatic",
-            "Calm and reassuring",
-            "Energetic and enthusiastic",
-            "Assertive and confident",
-            "Informal yet professional",
-            "Direct and inquisitive",
-            "Casual but focused",
-            "Strategic and decisive",
-            "Compassionate and thoughtful",
-            "Innovative and forward-thinking",
-            "Pragmatic and detail-oriented",
-            "Analytical and thorough",
-            "Energetic and engaging"
-        ])
-        return age, communication_style
-
-    async def call_vertex_ai(self, prompt: str) -> str:
-        try:
-            generation_config = GenerationConfig(
-                max_output_tokens=1200,
-                temperature=self.temperature,
-                top_p=self.top_p,
-                top_k=self.top_k
-            )
-            response = await self.llm.generate_content_async(
-                contents=[prompt],
-                generation_config=generation_config,
-                stream=False
-            )
-            raw_response = response.candidates[0].content.text.strip()
-            logging.debug(f"Raw LLM Response: {raw_response}")
-            return raw_response
-        except Exception as e:
-            logging.error(f"Error calling Vertex AI: {e}", exc_info=True)
-            return ""
-
-    def get_company_name_variations(self) -> Dict[str, List[str]]:
-        company_variations = {}
-        for company_data_item in self.company_data:
-            company_name = company_data_item['name']
-            variations = company_data_item.get('variations', [])
-            abbreviations = company_data_item.get('abbreviations', [])
-            misspellings = company_data_item.get('misspellings', [])
-            ticker = company_data_item.get('ticker')
-            all_variations = set([company_name] + variations + abbreviations + misspellings)
-            if ticker:
-                all_variations.add(ticker)
-            company_variations[company_name] = list(all_variations)
-        return company_variations
-
-    def select_topic(self) -> Tuple[str, str]:
-        if self.topic_distribution == "uniform":
-            category, topic = random.choice(self.flattened_topics)
-            logging.debug(f"Selected topic (uniform): {category} - {topic}")
-            return category, topic
-        else:
-            category, topic = random.choice(self.flattened_topics)
-            logging.debug(f"Selected topic (default): {category} - {topic}")
-            return category, topic
-
-    # def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
-    #     # Get metadata for this conversation type from the taxonomy.
-    #     conv_meta = self.conversation_type_metadata.get(conversation_type, {})
-    #     # Use the taxonomy's primary_topic if it exists; otherwise, default to the conversation type.
-    #     primary_topic = conv_meta.get("primary_topic", conversation_type)
-        
-    #     # Determine the number of companies to include based on conversation type.
-    #     num_companies = self.select_company_count(conversation_type)
-    #     key_companies = random.sample(
-    #         [c['name'] for c in self.company_data],
-    #         min(num_companies, len(self.company_data))
-    #     )
-        
-    #     # Define conversation length based on the number of messages.
-    #     conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
-        
-    #     blueprint = {
-    #         "conversation_type": conversation_type,
-    #         "primary_topic": primary_topic,
-    #         "key_companies": key_companies,
-    #         "conversation_length": conversation_length,
-    #         "persona_advisor": self.select_persona(),
-    #         "persona_client": self.select_persona(),
-    #         "conversation_flow": [
-    #             {"speaker": "advisor", "topic": "Initial market overview"},
-    #             {"speaker": "client", "topic": "Questions about specific companies"},
-    #             {"speaker": "advisor", "topic": "Analysis of earnings and performance"},
-    #             {"speaker": "client", "topic": "Follow-up and comparison"}
-    #         ]
-    #     }
-    #     return blueprint
-
-    # def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
-    #     # Get metadata for this conversation type from the taxonomy.
-    #     conv_meta = self.conversation_type_metadata.get(conversation_type, {})
-    #     # Use the taxonomy's primary_topic if it exists; otherwise, default to the conversation type.
-    #     primary_topic = conv_meta.get("primary_topic", conversation_type)
-        
-    #     # Determine the number of companies to include based on conversation type.
-    #     num_companies = self.select_company_count(conversation_type)
-    #     # Randomly sample companies from self.company_data.
-    #     # We now build each entry as a dictionary with structured info.
-    #     sampled_companies = random.sample(self.company_data, min(num_companies, len(self.company_data)))
-    #     key_companies = []
-    #     for company_dict in sampled_companies:
-    #         extracted_entity = company_dict.get("name", "Unknown")
-    #         official_name = company_dict.get("formal_name") or extracted_entity
-    #         ticker = company_dict.get("ticker", "Unknown")
-    #         key_companies.append({
-    #             "Extracted_entity": extracted_entity,
-    #             "Official_name": official_name,
-    #             "Ticker": ticker
-    #         })
-        
-    #     # Define conversation length based on the number of messages.
-    #     conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
-        
-    #     blueprint = {
-    #         "conversation_type": conversation_type,
-    #         "primary_topic": primary_topic,
-    #         "key_companies": key_companies,
-    #         "conversation_length": conversation_length,
-    #         "persona_advisor": self.select_persona(),
-    #         "persona_client": self.select_persona(),
-    #         "conversation_flow": [
-    #             {"speaker": "advisor", "topic": "Initial market overview"},
-    #             {"speaker": "client", "topic": "Questions about specific companies"},
-    #             {"speaker": "advisor", "topic": "Analysis of earnings and performance"},
-    #             {"speaker": "client", "topic": "Follow-up and comparison"}
-    #         ]
-    #     }
-    #     return blueprint
-
-
-    def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
-        # Get metadata for this conversation type from the taxonomy.
-        conv_meta = self.conversation_type_metadata.get(conversation_type, {})
-        # Use the taxonomy's primary_topic if it exists; otherwise, default to the conversation type.
-        primary_topic = conv_meta.get("primary_topic", conversation_type)
-        
-        # Determine the number of companies to include based on conversation type.
-        num_companies = self.select_company_count(conversation_type)
-        # Randomly sample companies from self.company_data and build each entry as a structured dict.
-        sampled_companies = random.sample(self.company_data, min(num_companies, len(self.company_data)))
-        key_companies = []
-        for company_dict in sampled_companies:
-            # Extracted_entity is the literal string from the "name" column.
-            # Official_name is taken from the "formal_name" column.
-            #official_name = company_dict.get("formal_name", extracted_entity)
-            official_name = company_dict.get("name", "Unknown")
-            extracted_entity = company_dict.get("formal_name", official_name)
-
-            ticker = company_dict.get("ticker", "Unknown")
-            key_companies.append({
-                "extracted_entity": extracted_entity,
-                "official_name": official_name,
-                "ticker": ticker
-            })
-        
-        # Define conversation length based on the number of messages.
-        conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
-        
-        blueprint = {
-            "conversation_type": conversation_type,
-            "primary_topic": primary_topic,
-            "key_companies": key_companies,
-            "conversation_length": conversation_length,
-            "persona_advisor": self.select_persona(),
-            "persona_client": self.select_persona(),
-            "conversation_flow": [
-                {"speaker": "advisor", "topic": "Initial market overview"},
-                {"speaker": "client", "topic": "Questions about specific companies"},
-                {"speaker": "advisor", "topic": "Analysis of earnings and performance"},
-                {"speaker": "client", "topic": "Follow-up and comparison"}
-            ]
-        }
-        return blueprint
-
-
-    # def parse_response(self, response: str, expected_messages: int) -> List[ChatLine]:
-    #     try:
-    #         start_tag = "<BEGIN CONVERSATION>"
-    #         end_tag = "<END CONVERSATION>"
-
-    #         start = response.find(start_tag)
-    #         end = response.find(end_tag)
-
-    #         if start == -1 or end == -1:
-    #             logging.error("Missing conversation tags in the LLM response.")
-    #             logging.debug(f"Full LLM Response: {response}")
-    #             return []
-
-    #         json_str = response[start + len(start_tag):end].strip()
-
-    #         if not json_str.startswith("[") or not json_str.endswith("]"):
-    #             logging.error("JSON array not found within conversation tags.")
-    #             logging.debug(f"Extracted JSON string: {json_str}")
-    #             return []
-
-    #         # Sanitize the JSON string by escaping backslashes and quotes
-    #         # Alternatively, use more sophisticated sanitization if needed
-    #         json_str = json_str.encode('utf-8', 'ignore').decode('utf-8')
-    #         data = json.loads(json_str)
-
-    #         if not isinstance(data, list):
-    #             logging.error("Parsed JSON is not a list.")
-    #             logging.debug(f"Parsed JSON data: {data}")
-    #             return []
-
-    #         lines = []
-    #         for index, line in enumerate(data):
-    #             if not isinstance(line, dict):
-    #                 logging.error(f"Message at index {index} is not a dictionary.")
-    #                 continue
-    #             if "speaker" not in line or "text" not in line:
-    #                 logging.error(f"Message at index {index} missing 'speaker' or 'text' keys.")
-    #                 continue
-    #             # Further sanitize text fields
-    #             text = line["text"].encode('utf-8', 'ignore').decode('utf-8')
-    #             lines.append(ChatLine(speaker=line["speaker"], text=text))
-
-    #         if len(lines) != expected_messages:
-    #             logging.warning(f"Expected {expected_messages} messages, but got {len(lines)}.")
-
-    #         return lines
-    #     except json.JSONDecodeError as e:
-    #         logging.error(f"JSON decoding error: {e}")
-    #         logging.debug(f"Malformed JSON: {response}")
-    #         return []
-    #     except Exception as e:
-    #         logging.error(f"Error parsing response: {e}")
-    #         logging.debug(f"Response content: {response}")
-    #         return []
-
-
-    def select_company_count(self, conversation_type: str) -> int:
-        conv_meta = self.conversation_type_metadata.get(conversation_type, {})
-        if "company_count_options" in conv_meta:
-            options = conv_meta["company_count_options"]
-            count = random.choice(options)
-        else:
-            # Fallback if conversation_type is not explicitly mapped.
-            count = random.choice([1, 2])
-        logging.debug(f"select_company_count: For conversation_type '{conversation_type}', selected count: {count}")
-        return count
-
-    # --- Updated: construct_prompt now accepts manifest_blueprint ---
-    # def construct_prompt(
-    #     self,
-    #     advisor_name: str,
-    #     client_name: str,
-    #     conversation_type: str,
-    #     num_messages: int,
-    #     manifest_blueprint: dict
-    # ) -> str:
-    #     # Embed the manifest blueprint in the prompt for LLM guidance.
-    #     manifest_str = json.dumps(manifest_blueprint, indent=4)
-    #     prompt_header = f"Manifest Blueprint (OUTLINE OF CONVERSATION):\n{manifest_str}\n\n"
-
-    #     message_format = self.get_message_format(conversation_type)
-    #     conversation_metadata = self.conversation_type_metadata.get(conversation_type, {})
-    #     message_style = conversation_metadata.get("message_style", "professional")
-
-    #     # Get company name variations and example companies prompt
-    #     example_companies_prompt = ""
-    #     company_example_count = self.select_company_count(conversation_type)
-    #     example_companies = random.sample(self.company_data, company_example_count)
-    #     for company_dict in example_companies:
-    #         company = company_dict['name']
-    #         variations = [company]
-    #         if company_dict.get('variations'):
-    #             variations.extend(company_dict['variations'])
-    #         if company_dict.get('abbreviations'):
-    #             variations.extend(company_dict['abbreviations'])
-    #         ticker = company_dict.get('ticker')
-    #         if ticker:
-    #             variations.append(ticker)
-    #         example_companies_prompt += f"- **{company}**: Variations like: {', '.join(set(variations))}\n"
-
-    #     few_shot_examples = self.load_few_shot_examples(conversation_type)
-    #     message_length_guidance = self.get_message_length_guidance(num_messages)
-
-    #     prompt_body = (
-    #         f"Generate a realistic and {message_format} chat conversation focused on **{conversation_type}** between two financial professionals on Symphony. "
-    #         f"The primary goal is company mentions for tagging, with varied message lengths.\n\n"
-    #         f"Financial Professional 1 (Advisor): {advisor_name}, Persona: {self.select_persona()}\n"
-    #         f"Financial Professional 2 (Client): {client_name}, Persona: {self.select_persona()}\n\n"
-    #         f"Conversation Topic: {conversation_type}\n"
-    #         f"Message Format: {message_format}\n\n"
-    #         f"**Company Mention Guidelines:**\n"
-    #         f"- MUST heavily feature company mentions from the provided list, using varied formats (formal, abbreviations, tickers, misspellings).\n"
-    #         f"- Example Company Variations:\n{example_companies_prompt}"
-    #         f"- Company List Examples (see config.COMPANY_DATA_FILE):\n"
-    #     )
-    #     for i in range(min(5, len(self.company_data))):
-    #         prompt_body += f"  - {self.company_data[i]['name']} ({self.company_data[i].get('ticker', '')})\n"
-    #     prompt_body += (
-    #         f"-.\n" # and more
-    #         f"- Ticker Examples (from COMPANY_DATA_FILE): {', '.join(set(c['ticker'] for c in self.company_data if c.get('ticker')))}\n"
-    #         f"- Abbreviation Examples (from COMPANY_DATA_FILE): {', '.join(set(abbr for c in self.company_data if c.get('abbreviations') for abbr in c['abbreviations']))}\n"
-    #         f"- Misspelling Examples (from COMPANY_DATA_FILE): {', '.join(set(misspelling for c in self.company_data if c.get('misspellings') for misspelling in c['misspellings']))}\n\n"
-    #         f"**Message Length and Style Guidelines:**\n"
-    #         f"1. Generate a conversation with **exactly {num_messages} messages**, with message lengths guided as follows:\n"
-    #         f"   - **Message Length Distribution:** [ {', '.join(message_length_guidance)} ] (This is guidance, try to approximate).\n"
-    #         f"   - **Short Messages:** A few words.\n"
-    #         f"   - **Medium Messages:** A sentence or two providing some context or detail.\n"
-    #         f"   - **Long Messages:** Multi-sentence messages, like market updates or stock analysis excerpts.\n"
-    #         f"2. Maintain a {message_format} and professional tone.\n"
-    #         f"3. Be concise and professional.\n"
-    #         f"4. Focus on realistic financial discussions.\n"
-    #         f"5. Integrate multiple company mentions within messages naturally.\n\n"
-    #         f"**Conversation Flow Guidelines:**\n"
-    #         f"7. Conversation initiation can be by either professional.\n"
-    #         f"8. Speakers should alternate naturally.\n"
-    #         f"9. Conversation should have a logical flow and progression, with each message relating to the previous ones.\n\n"
-    #         f"**Instructions for Output Format - VERY IMPORTANT!**\n"
-    #         f"- **Output Format:** Structure the ENTIRE conversation as a **single JSON array** enclosed within the **EXACT** tags: `<BEGIN CONVERSATION>` and `<END CONVERSATION>`. Do not include any other text outside these tags.\n"
-    #         f"- **Message Object Structure:** Each message in the JSON array must be a JSON object with exactly two keys: 'speaker' (value '0' for {client_name}, '1' for {advisor_name}) and 'text' (string value).\n"
-    #         f"- **Example Output:**\n"
-    #         f"<BEGIN CONVERSATION>\n"
-    #         f"[\n"
-    #         f'  {{\n'
-    #         f'    "speaker": "0",\n'
-    #         f'    "text": "Good morning, any thoughts on {random.choice(self.company_data)["name"]}"\n'
-    #         f"  }},\n"
-    #         f'  {{\n'
-    #         f'    "speaker": "1",\n'
-    #         f'    "text": "Yes, I was just looking at {random.choice(self.company_data)["name"]}\'s recent performance."\n'
-    #         f"  }}\n"
-    #         f"]\n"
-    #         f"<END CONVERSATION>\n\n"
-    #         f"- **No Extraneous Content:** Do not include any introductory or concluding sentences, just the JSON array within the tags.\n"
-    #         f"- **JSON Validity:** Ensure the output is valid, well-formed JSON and easily parsable.\n"
-    #         f"- **Text Sanitization:** Ensure all text content within the JSON is properly formatted for JSON (escape special characters if needed).\n\n"
-    #         f"**Few-Shot Examples (for {conversation_type} - Style and Format):**\n"
-    #         f"{few_shot_examples}\n\n"
-    #         f"<BEGIN CONVERSATION>\n[\n  {{\n    \"speaker\": \"0\" or \"1\",\n    \"text\": \"...\"\n  }},\n  ... (messages)\n]\n<END CONVERSATION>\n\n"
-    #         f"**REMEMBER: Output ONLY the valid JSON array enclosed within the `<BEGIN CONVERSATION>` and `<END CONVERSATION>` tags.**"
-    #     )
-    #     full_prompt = prompt_header + prompt_body
-    #     logging.debug(f"Constructed Prompt: {full_prompt}")
-    #     return full_prompt
-    def construct_prompt(
-        self,
-        advisor_name: str,
-        client_name: str,
-        conversation_type: str,
-        num_messages: int,
-        manifest_blueprint: dict
-    ) -> str:
-        """
-        Constructs the prompt for the LLM by embedding the manifest blueprint and
-        clear, explicit instructions on the expected output format.
-        """
-        # Embed the blueprint and add explicit formatting instructions.
-        manifest_str = json.dumps(manifest_blueprint, indent=4)
-        prompt_header = (
-            "Manifest Blueprint (OUTLINE OF CONVERSATION):\n"
-            f"{manifest_str}\n\n"
-            "IMPORTANT: Return a valid JSON object with a single key 'conversations'.\n"
-            "The value of 'conversations' must be a JSON array containing exactly "
-            f"{num_messages} message objects. Each message object must have exactly two keys:\n"
-            "    'speaker': '0' (client) or '1' (advisor), and\n"
-            "    'text': a string representing the message text.\n"
-            "Do not include any extra keys or text outside this JSON object.\n\n"
-        )
-
-        message_format = self.get_message_format(conversation_type)
-        conversation_metadata = self.conversation_type_metadata.get(conversation_type, {})
-        # Build example companies prompt:
-        example_companies_prompt = ""
-        company_example_count = self.select_company_count(conversation_type)
-        example_companies = random.sample(self.company_data, company_example_count)
-        for company_dict in example_companies:
-            company = company_dict['name']
-            variations = [company]
-            if company_dict.get('variations'):
-                variations.extend(company_dict['variations'])
-            if company_dict.get('abbreviations'):
-                variations.extend(company_dict['abbreviations'])
-            ticker = company_dict.get('ticker')
-            if ticker:
-                variations.append(ticker)
-            example_companies_prompt += f"- **{company}**: Variations like: {', '.join(set(variations))}\n"
-
-        few_shot_examples = self.load_few_shot_examples(conversation_type)
-        message_length_guidance = self.get_message_length_guidance(num_messages)
-
-        prompt_body = (
-            f"Generate a realistic and {message_format} chat conversation focused on **{conversation_type}** "
-            "between two financial professionals on Symphony. The conversation must strictly follow the Manifest Blueprint's guidelines.\n\n"
-            f"Financial Professional 1 (Advisor): {advisor_name}, Persona: {self.select_persona()}\n"
-            f"Financial Professional 2 (Client): {client_name}, Persona: {self.select_persona()}\n\n"
-            f"Conversation Topic: {conversation_type}\n"
-            f"Message Format: {message_format}\n\n"
-            f"**Company Mention Guidelines:**\n"
-            f"- ONLY mention the companies specified in the Manifest Blueprint's 'key_companies' field.\n"
-            f"- Example Company Variations:\n{example_companies_prompt}\n"
-            f"**Message Length and Style Guidelines:**\n"
-            f"- Produce exactly {num_messages} messages with the following approximate length distribution: [ {', '.join(message_length_guidance)} ].\n"
-            f"- Maintain a {message_format} and professional tone.\n"
-            f"- Ensure natural alternation between speakers and follow the provided conversation flow.\n\n"
-            f"**Instructions for Output Format:**\n"
-            f"- Return ONLY the valid JSON object (do not include any additional text) enclosed within the tags `<BEGIN CONVERSATION>` and `<END CONVERSATION>`.\n"
-            f"- Each message object must have exactly two keys: 'speaker' and 'text'.\n\n"
-            f"**Few-Shot Examples (for {conversation_type}):**\n"
-            f"{few_shot_examples}\n\n"
-            "Example:\n"
-            "<BEGIN CONVERSATION>\n"
-            "[\n"
-            '  {"speaker": "0", "text": "Good morning, any thoughts on Apple Inc.?"},\n'
-            '  {"speaker": "1", "text": "Yes, I believe Apple Inc. is showing strong performance."}\n'
-            "]\n"
-            "<END CONVERSATION>\n\n"
-            "REMEMBER: Output ONLY the valid JSON object enclosed within the `<BEGIN CONVERSATION>` and `<END CONVERSATION>` tags."
-        )
-
-        full_prompt = prompt_header + prompt_body
-        logging.debug(f"Constructed Prompt (in {__file__}:{__import__('inspect').currentframe().f_lineno}): {full_prompt}")
-        return full_prompt
-
-    def parse_response(self, response: str, expected_messages: int) -> List[ChatLine]:
-        try:
-            start_tag = "<BEGIN CONVERSATION>"
-            end_tag = "<END CONVERSATION>"
-
-            start = response.find(start_tag)
-            end = response.find(end_tag)
-
-            if start == -1 or end == -1:
-                logging.error(f"Missing conversation tags in the LLM response (in {__file__}:{inspect.currentframe().f_lineno}).")
-                logging.debug(f"Full LLM Response: {response}")
-                return []
-
-            json_str = response[start + len(start_tag):end].strip()
-
-            # If the output starts with an array, wrap it in an object.
-            if json_str.startswith("["):
-                logging.warning(f"LLM returned a JSON array instead of an object (in {__file__}:{inspect.currentframe().f_lineno}). Wrapping array in {{'conversations': ...}}.")
-                data = {"conversations": json.loads(json_str)}
-            elif json_str.startswith("{"):
-                data = json.loads(json_str)
-            else:
-                logging.error(f"Expected a JSON object (starting with '{{') but did not find one (in {__file__}:{inspect.currentframe().f_lineno}).")
-                logging.debug(f"Extracted JSON string: {json_str}")
-                return []
-
-            if not isinstance(data, dict):
-                logging.error(f"Parsed JSON is not an object as expected (in {__file__}:{inspect.currentframe().f_lineno}).")
-                logging.debug(f"Parsed JSON data: {data}")
-                return []
-
-            if "conversations" not in data or not isinstance(data["conversations"], list):
-                logging.error(f"JSON object missing key 'conversations' or it is not a list (in {__file__}:{inspect.currentframe().f_lineno}).")
-                logging.debug(f"Parsed JSON data: {data}")
-                return []
-
-            lines = []
-            for index, message in enumerate(data["conversations"]):
-                if not isinstance(message, dict):
-                    logging.error(f"Message at index {index} is not a dictionary (in {__file__}:{inspect.currentframe().f_lineno}).")
-                    continue
-                if "speaker" not in message or "text" not in message:
-                    logging.error(f"Message at index {index} missing required keys 'speaker' or 'text' (in {__file__}:{inspect.currentframe().f_lineno}).")
-                    continue
-                text = message["text"].encode('utf-8', 'ignore').decode('utf-8')
-                lines.append(ChatLine(speaker=message["speaker"], text=text))
-
-            if len(lines) != expected_messages:
-                logging.warning(f"Expected {expected_messages} messages, but got {len(lines)} (in {__file__}:{inspect.currentframe().f_lineno}).")
-
-            return lines
-
-        except json.JSONDecodeError as e:
-            logging.exception(f"JSON decoding error while parsing LLM response (in {__file__}:{inspect.currentframe().f_lineno}): {e}")
-            logging.debug(f"Malformed JSON: {response}")
-            return []
-        except Exception as e:
-            logging.exception(f"Unexpected error while parsing LLM response (in {__file__}:{inspect.currentframe().f_lineno}): {e}")
-            logging.debug(f"Response content: {response}")
-            return []
-
-
-    # --- Updated: generate_conversation now accepts manifest_blueprint ---
-    async def generate_conversation(
-        self,
-        advisor_name: str,
-        client_name: str,
-        conversation_type: str,
-        num_messages: int,
-        manifest_blueprint: dict,
-        max_retries: int = 3
-    ) -> SingleConversation:
-        for attempt in range(1, max_retries + 1):
-            try:
-                prompt = self.construct_prompt(advisor_name, client_name, conversation_type, num_messages, manifest_blueprint)
-                logging.debug(f"Constructed Prompt for Conversation: {prompt}")
-                raw_response = await self.call_vertex_ai(prompt)
-                logging.debug(f"Raw LLM Response for Conversation: {raw_response}")
-                if not raw_response:
-                    logging.error("Received empty response from LLM.")
-                    continue
-                lines = self.parse_response(raw_response, num_messages)
-                if not lines:
-                    logging.warning(f"Attempt {attempt}: Parsed conversation lines are empty.")
-                    continue
-                return SingleConversation(
-                    conversation_id="",
-                    timestamp="",
-                    category=conversation_type,
-                    topic=conversation_type,
-                    lines=lines
-                )
-            except Exception as e:
-                logging.error(f"Error generating conversation on attempt {attempt}: {e}", exc_info=True)
-        logging.error(f"Failed to generate a valid conversation after {max_retries} attempts.")
-        return SingleConversation(
-            conversation_id="",
-            timestamp="",
-            category=conversation_type,
-            topic=conversation_type,
-            lines=[]
-        )
-
-    async def process_conversation(
-        self,
-        conv_number: int,
-        conversation_type: str,
-        advisor_name: str,
-        client_name: str,
-        num_messages: int
-    ):
-        """
-        Processes and buffers a single conversation.
-        """
-        try:
-            logging.debug(f"Processing Conversation {conv_number}: Advisor - {advisor_name}, Client - {client_name}")
-            # Create manifest blueprint as a blueprint for the conversation
-            blueprint = self.create_manifest_blueprint(conversation_type, num_messages)
-            # Load few-shot examples (using the blueprint as script)
-            few_shot_examples = self.load_few_shot_examples(conversation_type, script=blueprint)
-            # Generate the conversation using the blueprint
-            single_conv = await self.generate_conversation(advisor_name, client_name, conversation_type, num_messages, manifest_blueprint=blueprint)
-            if not single_conv.lines:
-                logging.warning(f"Conversation {conv_number} between {advisor_name} and {client_name} has no messages. Skipping.")
-                return
-
-            conv_id = f"conv_{conv_number:04d}"
-            timestamp = datetime.utcnow().isoformat() + "Z"
-            single_conv.conversation_id = conv_id
-            single_conv.timestamp = timestamp
-
-            key = (advisor_name, client_name)
-            if key not in self.conversation_buffer:
-                self.conversation_buffer[key] = ConversationFile(
-                    version=self.json_version,
-                    advisor=advisor_name,
-                    client=client_name,
-                    conversations=[]
-                )
-            self.conversation_buffer[key].conversations.append(single_conv)
-
-            # Create final manifest that includes both the blueprint and the generated conversation
-            final_manifest = {
-                "blueprint": blueprint,
-                "generated_conversation": single_conv.to_dict()
-            }
-            #self.manifest_logger.info(f"Generated Conversation Manifest (ID: {conv_id}):\n{json.dumps(final_manifest, indent=4)}")
-            self.manifest_logger.info(f"---BEGIN_MANIFEST---")
-            self.manifest_logger.info(json.dumps(final_manifest, indent=4))
-            self.manifest_logger.info(f"---END_MANIFEST---")
-
-            logging.info(f"Generated conversation {conv_number}/{self.num_conversations} between {advisor_name} and {client_name}")
-        except Exception as e:
-            logging.error(f"Failed to process conversation {conv_number}: {e}", exc_info=True)
-
-    async def generate_synthetic_data(self):
-        tasks = []
-        for i in range(1, self.num_conversations + 1):
-            conversation_type = self.select_conversation_type()
-            advisor, client = self.select_advisors_clients()
-            num_messages = random.randint(self.min_messages, self.max_messages)
-            tasks.append(self.process_conversation(i, conversation_type, advisor, client, num_messages))
-        await asyncio.gather(*tasks)
-        for (advisor, client), conv_file in self.conversation_buffer.items():
-            try:
-                self.save_conversation_file(advisor, client, conv_file)
-            except Exception as e:
-                logging.error(f"Failed to save conversations for {advisor} and {client}: {e}")
 
     def save_conversation_file(self, advisor: str, client: str, conversation_file: ConversationFile):
         sanitized_advisor = sanitize_filename(advisor)
