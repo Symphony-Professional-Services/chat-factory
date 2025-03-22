@@ -51,8 +51,8 @@ The scripts include basic error handling. For more robust solutions, consider en
 ### Docker Build
 sudo docker build -t synthetic-chat-generator . --no-cache
 
-docker run -it --rm -v $(pwd)/synthetic_data:/app/synthetic_data synthetic-chat-generator (unknown error no log file outside of mount)
-docker run -it --rm -v $(pwd):/app synthetic-chat-generator (file perm error)
+docker run -it --rm -v $(pwd)/synthetic_data:/app/synthetic_data synthetic-chat-generator 
+docker run -it --rm -v $(pwd):/app synthetic-chat-generator 
 
 docker run -it --rm \
     -v $(pwd):/app \
@@ -61,7 +61,7 @@ docker run -it --rm \
     synthetic-chat-generator
 
 
-### BASH SCRIPT INSIDE OF DOCKER IMAGE (DEBUG)
+### BASH SCRIPT INSIDE OF DOCKER IMAGE (USE FOR DEBUG: OPENS A BASH TERMINAL INSIDE OF CONTAINER)
 docker run -it --entrypoint bash synthetic-chat-generator
 
 
@@ -74,3 +74,6 @@ NEED TO IMPROVE VARIABILITY / JUDGE/FILTER USING EMBEDDINGS TO FIND DIVERSITY OF
 
 NEED TO IMPROVE TAXONOMY IMPORT AND REDO INTEGRATION WITH CONFIG FILE 
 NEED TO MAKE IT MORE FLEXIBLE AND MODULAR - GET DAG DESIGN OF CODE
+
+### Post - Processing : company tagging
+- post_processing_add_company_entities.py

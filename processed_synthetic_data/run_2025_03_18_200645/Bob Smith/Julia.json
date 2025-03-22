@@ -1,0 +1,35 @@
+{
+    "version": "5",
+    "advisor": "Bob Smith",
+    "client": "Julia",
+    "conversations": [
+        {
+            "conversation_id": "conv_0011",
+            "timestamp": "2025-03-18T20:06:56.747570Z",
+            "category": "Earnings reports discussions",
+            "topic": "Earnings reports discussions",
+            "lines": [
+                {
+                    "speaker": "1",
+                    "text": "Good morning, Julia.  The overall market seems to be reacting cautiously to recent economic data.  We're seeing some sector-specific volatility, but generally a holding pattern for most indices."
+                },
+                {
+                    "speaker": "0",
+                    "text": "Good morning, Bob. I've been reviewing the recent earnings reports for Citigroup (C) and Remitly Global (RELY). Citigroup's results were slightly below expectations, particularly in their investment banking division.  However, their consumer banking segment showed resilience.  Remitly, on the other hand, exceeded expectations, driven by strong growth in their international remittance services. I'm curious about your assessment of these two companies, considering their contrasting performances and the current market climate."
+                }
+            ],
+            "key_companies": [
+                {
+                    "extracted_entity": "Citigroup",
+                    "official_name": "Citigroup Inc.",
+                    "ticker": "C"
+                },
+                {
+                    "extracted_entity": "Remitly Global",
+                    "official_name": "Remitly Global, Inc.",
+                    "ticker": "RELY"
+                }
+            ]
+        }
+    ]
+}

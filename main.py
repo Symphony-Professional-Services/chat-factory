@@ -129,7 +129,7 @@ class SyntheticChatGenerator:
         self.conversation_manifest_dir = Path(config.CONVERSATION_MANIFEST_DIR)
         self.conversation_manifest_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create a dedicated logger for conversation manifests with run_id in the file name
+        #Create a dedicated logger for conversation manifests with run_id in the file name
         self.manifest_logger = logging.getLogger("conversation_manifest")
         self.manifest_logger.setLevel(logging.INFO)
         if not self.manifest_logger.handlers:
@@ -137,6 +137,15 @@ class SyntheticChatGenerator:
             fh = logging.FileHandler(manifest_log_file)
             fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
             self.manifest_logger.addHandler(fh)
+
+        # self.scripts_logger = logging.getLogger("conversation_scripts")
+        # self.scripts_logger.setLevel(logging.INFO)
+        # if not self.scripts_logger.handlers:
+        #     # Write to an absolute or mapped directory (adjust as needed)
+        #     scripts_log_path = Path("/app/output") / f"conversation_manifest_{self.run_id}.log"
+        #     fh = logging.FileHandler(scripts_log_path)
+        #     fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'))
+        #     self.scripts_logger.addHandler(fh)
 
     def load_company_data(self) -> List[Dict]:
         """Loads company data from the CSV file."""
@@ -397,12 +406,22 @@ class SyntheticChatGenerator:
             logging.debug(f"Selected topic (default): {category} - {topic}")
             return category, topic
 
-    # --- New: Create Manifest Blueprint ---
     # def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
-    #     # For illustration, we use static primary_topic; you could enhance this logic.
-    #     primary_topic = "Q2 2024 Tech Earnings"
-    #     key_companies = random.sample([c['name'] for c in self.company_data], min(3, len(self.company_data)))
+    #     # Get metadata for this conversation type from the taxonomy.
+    #     conv_meta = self.conversation_type_metadata.get(conversation_type, {})
+    #     # Use the taxonomy's primary_topic if it exists; otherwise, default to the conversation type.
+    #     primary_topic = conv_meta.get("primary_topic", conversation_type)
+        
+    #     # Determine the number of companies to include based on conversation type.
+    #     num_companies = self.select_company_count(conversation_type)
+    #     key_companies = random.sample(
+    #         [c['name'] for c in self.company_data],
+    #         min(num_companies, len(self.company_data))
+    #     )
+        
+    #     # Define conversation length based on the number of messages.
     #     conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
+        
     #     blueprint = {
     #         "conversation_type": conversation_type,
     #         "primary_topic": primary_topic,
@@ -419,6 +438,48 @@ class SyntheticChatGenerator:
     #     }
     #     return blueprint
 
+    # def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
+    #     # Get metadata for this conversation type from the taxonomy.
+    #     conv_meta = self.conversation_type_metadata.get(conversation_type, {})
+    #     # Use the taxonomy's primary_topic if it exists; otherwise, default to the conversation type.
+    #     primary_topic = conv_meta.get("primary_topic", conversation_type)
+        
+    #     # Determine the number of companies to include based on conversation type.
+    #     num_companies = self.select_company_count(conversation_type)
+    #     # Randomly sample companies from self.company_data.
+    #     # We now build each entry as a dictionary with structured info.
+    #     sampled_companies = random.sample(self.company_data, min(num_companies, len(self.company_data)))
+    #     key_companies = []
+    #     for company_dict in sampled_companies:
+    #         extracted_entity = company_dict.get("name", "Unknown")
+    #         official_name = company_dict.get("formal_name") or extracted_entity
+    #         ticker = company_dict.get("ticker", "Unknown")
+    #         key_companies.append({
+    #             "Extracted_entity": extracted_entity,
+    #             "Official_name": official_name,
+    #             "Ticker": ticker
+    #         })
+        
+    #     # Define conversation length based on the number of messages.
+    #     conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
+        
+    #     blueprint = {
+    #         "conversation_type": conversation_type,
+    #         "primary_topic": primary_topic,
+    #         "key_companies": key_companies,
+    #         "conversation_length": conversation_length,
+    #         "persona_advisor": self.select_persona(),
+    #         "persona_client": self.select_persona(),
+    #         "conversation_flow": [
+    #             {"speaker": "advisor", "topic": "Initial market overview"},
+    #             {"speaker": "client", "topic": "Questions about specific companies"},
+    #             {"speaker": "advisor", "topic": "Analysis of earnings and performance"},
+    #             {"speaker": "client", "topic": "Follow-up and comparison"}
+    #         ]
+    #     }
+    #     return blueprint
+
+
     def create_manifest_blueprint(self, conversation_type: str, num_messages: int) -> dict:
         # Get metadata for this conversation type from the taxonomy.
         conv_meta = self.conversation_type_metadata.get(conversation_type, {})
@@ -427,10 +488,22 @@ class SyntheticChatGenerator:
         
         # Determine the number of companies to include based on conversation type.
         num_companies = self.select_company_count(conversation_type)
-        key_companies = random.sample(
-            [c['name'] for c in self.company_data],
-            min(num_companies, len(self.company_data))
-        )
+        # Randomly sample companies from self.company_data and build each entry as a structured dict.
+        sampled_companies = random.sample(self.company_data, min(num_companies, len(self.company_data)))
+        key_companies = []
+        for company_dict in sampled_companies:
+            # Extracted_entity is the literal string from the "name" column.
+            # Official_name is taken from the "formal_name" column.
+            #official_name = company_dict.get("formal_name", extracted_entity)
+            official_name = company_dict.get("name", "Unknown")
+            extracted_entity = company_dict.get("formal_name", official_name)
+
+            ticker = company_dict.get("ticker", "Unknown")
+            key_companies.append({
+                "extracted_entity": extracted_entity,
+                "official_name": official_name,
+                "ticker": ticker
+            })
         
         # Define conversation length based on the number of messages.
         conversation_length = "medium" if num_messages < 8 else ("long" if num_messages > 12 else "short")
@@ -840,7 +913,11 @@ class SyntheticChatGenerator:
                 "blueprint": blueprint,
                 "generated_conversation": single_conv.to_dict()
             }
-            self.manifest_logger.debug(f"Generated Conversation Manifest (ID: {conv_id}):\n{json.dumps(final_manifest, indent=4)}")
+            #self.manifest_logger.info(f"Generated Conversation Manifest (ID: {conv_id}):\n{json.dumps(final_manifest, indent=4)}")
+            self.manifest_logger.info(f"---BEGIN_MANIFEST---")
+            self.manifest_logger.info(json.dumps(final_manifest, indent=4))
+            self.manifest_logger.info(f"---END_MANIFEST---")
+
             logging.info(f"Generated conversation {conv_number}/{self.num_conversations} between {advisor_name} and {client_name}")
         except Exception as e:
             logging.error(f"Failed to process conversation {conv_number}: {e}", exc_info=True)

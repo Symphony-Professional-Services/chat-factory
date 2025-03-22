@@ -1,96 +1,102 @@
-### CONFIG V2
-import os
 
-# Google Cloud Configuration
-PROJECT_ID = "sym-professional-services"
-LOCATION = "us-central1"
-MODEL_NAME = "gemini-1.5-flash-002"
+# # Google Cloud Configuration
+# PROJECT_ID = "PROJECT ID"
+# LOCATION = "LOCATION"  
+# MODEL_NAME = "gemini-1.5-flash-002"  
 
-TEMPERATURE = 0.3 # .2
-TOP_P = 1
-TOP_K = 40 #32
-
-# Input Configuration
-TAXONOMY_FILE = "taxonomy.json" # We might not need this anymore, but let's keep it for now.
-ADVISOR_NAMES = [
-    "Alice Johnson", "Bob Smith", "Carol Williams", "David Brown",
-    "Eve Davis", "Frank Miller", "Grace Wilson", "Hank Moore",
-    "Ivy Taylor", "Jack Anderson"
-]
-CLIENT_NAMES = [
-    "Allen", "Betty", "Charles", "Diana", "Edward",
-    "Fiona", "George", "Hannah", "Ian", "Julia"
-]
-
-# -------- NEW CONFIGURATION FOR COMPANY TAGGING DATASET --------
-PERSONAS = [
-    "Sell-side Analyst",
-    "Buy-side Analyst",
-    "Portfolio Manager",
-    "Research Analyst"
-]
-
-# COMPANY_LIST = [
-#     "Equatorial", "Omega", "Auren", "Eletrobras", "Copasa", "JPM", "Citi", "BofA",
-#     "Tesla", "Apple", "Google", "Blackrock", "TotalEnergies", "Allianz", "Eni", "Meta",
-#     "Amazon", "Iberdrola", "Orsted", "McKinsey", "Covivio", "Li-Auto", "Politico",
-#     "Euractiv", "Adidas", "Amer Sports", "Anta Sports", "Keji", "TianYuan", "Grab",
-#     "Cajamar", "Bandhan", "Remitly", "Vodacom", "Nubank", "MercadoLibre", "Ecolab",
-#     "Maplecroft", "Tiktok", "Cargill", "Sons of Gwalia", "Sappi", "Kubota", "Suzano",
-#     "General Motors", "Blackstone", "Tapestry"
+# # Input Configuration
+# TAXONOMY_FILE = "taxonomy.json"
+# ADVISOR_NAMES = [
+#     "Alice Johnson", "Bob Smith", "Carol Williams", "David Brown",
+#     "Eve Davis", "Frank Miller", "Grace Wilson", "Hank Moore",
+#     "Ivy Taylor", "Jack Anderson"
+# ]
+# CLIENT_NAMES = [
+#     "Allen", "Betty", "Charles", "Diana", "Edward",
+#     "Fiona", "George", "Hannah", "Ian", "Julia"
 # ]
 
-CONVERSATION_TYPES = [
-    "Trade discussions",
-    "Deal negotiations",
-    "Stock analysis",
-    "Market updates",
-    "News on specific companies",
-    "Earnings reports discussions"
-]
+# # Output Configuration
+# OUTPUT_DIR = "synthetic_data"
+# JSON_VERSION = "2"
 
-MESSAGE_FORMATS = {
-    "Trade discussions": "informal",
-    "Deal negotiations": "informal",
-    "Stock analysis": "formal",
-    "Market updates": "formal",
-    "News on specific companies": "formal",
-    "Earnings reports discussions": "formal"
+# # Chat Generation Configuration
+# NUM_CONVERSATIONS = 500  # Total number of conversations to generate
+# MIN_MESSAGES = 2
+# MAX_MESSAGES = 15
+
+# # Topic Distribution Configuration
+# TOPIC_DISTRIBUTION = "uniform"  # or specify a custom distribution
+
+# # Logging Configuration
+# LOG_FILE = "synthetic_chat_generator.log"
+
+
+# Google Cloud Configuration
+PROJECT_ID = "sym-professional-services"  # Replace with your actual project ID
+LOCATION = "us-central1"  # Example location, adjust as needed
+MODEL_NAME = "gemini-1.5-flash-002"
+
+# Input Configuration
+TAXONOMY_FILE = "taxonomy.json"
+# Advisor Configuration
+NUM_ADVISORS = 200
+MIN_ADVISORS = 20
+MAX_ADVISORS = 50  # Based on the average range
+ADVISOR_NAMES_FILE = "advisor_names.txt"  # Consider using a file for a larger list
+# Client Configuration
+AVG_CLIENTS_PER_ADVISOR = 10
+MIN_CLIENTS_PER_ADVISOR = 15
+MAX_CLIENTS_PER_ADVISOR = 20
+CLIENT_NAMES_FILE = "client_names.txt"  # Consider using a file for a larger list
+
+# Time Dimension Configuration
+CONVERSATION_SPAN_WEEKS = 4  # Minimum 4 weeks
+WEEKEND_FREQUENCY_MULTIPLIER = 0.5  # Reduce frequency on weekends by half
+WORKING_HOURS_START = 9
+WORKING_HOURS_END = 17  # 5 PM (17:00 in 24-hour format)
+AFTER_HOURS_FREQUENCY_REDUCTION = 0.25  # Reduce frequency to 25% after hours
+
+# Conversation Frequency Configuration
+AVG_MESSAGES_PER_DAY_PER_ADVISOR_PER_CLIENT = 45
+CLIENT_INTERACTION_PROBABILITY = {
+    "high": 0.8,  # Example: 80% chance of interaction weekly for high-touch
+    "medium": 0.5, # Example: 50% chance of interaction monthly for medium-touch
+    "low": 0.2     # Example: 20% chance of interaction quarterly for low-touch
 }
-# NOTE: dont want to be giving a company list and ticker list seperate....Cant see why a user would want that. Should pull ticker info from prompt/llm?
-# TICKER_SYMBOLS = ["JPM", "AAPL", "TSLA", "MSFT"]
-# COMMON_ABBREVIATIONS = ["JPM", "BofA", "GS", "Citi", "GOOG"] # proxy for specific terms/phrases to be used in place of a company/general
-# MISSPELLINGS = ["MorganStanly", "BoA", "teslsa", "googl"] # forced mispellings that we know are common (could move this to the llm to randomly select words to mess up)
-# FORMAL_NAMES = ["JPMorgan Chase", "Bank of America", "Tesla Inc.", "Alphabet Inc."] # other formal names (feels like there could be a dictionary - maybe already - that contains standard company names)
+PROBABILITY_CLIENT_INITIATES = 0.7  # Example: 70% chance client initiates
 
-
-# Path to the company data CSV file
-COMPANY_DATA_FILE = "company_data.csv"
-
-
-MESSAGE_LENGTH_RATIO = { # Approximate ratio of message lengths (can be adjusted)
-    "short": 0.4,  # 30% short messages
-    "medium": 0.3, # 50% medium messages
-    "long": 0.3   # 20% long messages
+# Conversation Content Configuration
+BASE_TOPICS = {
+    "Small Talk": 0.15,  # Example base probability
+    "Market Commentary": 0.20,
+    "Client Personal Concerns": 0.10,
+    "Product & Service Inquiry": 0.25,
+    "Business/Advisory": 0.30
 }
+TRENDING_TOPICS = {
+    "ESG Investing": {"start_date": "2025-03-01", "end_date": "2025-04-30", "probability_boost": 0.1},
+    "Specific Market Event X": {"start_date": "2025-03-15", "end_date": "2025-03-22", "probability_boost": 0.15}
+    # Add more trending topics with their start/end dates and probability boosts
+}
+TOPIC_DISTRIBUTION_TYPE = "normal"  # Consider implementing this logic
+CONVERSATION_DEPTH_DISTRIBUTION = "poisson"
+AVG_MESSAGES_PER_CONVERSATION = 5  # Example average for Poisson distribution
+EDGE_CASE_PROBABILITY = 0.5  # 50% chance of a sub-topic conversation
 
-FEW_SHOT_EXAMPLES_DIR = "few_shot_examples" # Directory to store few-shot example files
+# Language Style Configuration
+ADVISOR_STYLE_PROFILES_FILE = "advisor_styles.json" # File to define different advisor styles
 
-CONVERSATION_MANIFEST_DIR = "conversation_scripts"  # Add this line
-
-# -------- END NEW CONFIGURATION --------
+# Sentiment Configuration
+SENTIMENT_PROFILES_FILE = "sentiment_profiles.json" # File to define sentiment based on client/topic
 
 # Output Configuration
 OUTPUT_DIR = "synthetic_data"
-JSON_VERSION = "4"
+JSON_VERSION = "2"
 
 # Chat Generation Configuration
-NUM_CONVERSATIONS = 20  # Reduced to 100 for initial target as per requirements
-MIN_MESSAGES = 2
-MAX_MESSAGES = 10
-
-# Topic Distribution Configuration
-TOPIC_DISTRIBUTION = "uniform"  # or specify a custom distribution
+MIN_MESSAGES_PER_CONVERSATION = 2
+MAX_MESSAGES_PER_CONVERSATION = 20 # Adjust based on Conversation Depth
 
 # Logging Configuration
 LOG_FILE = "synthetic_chat_generator.log"
