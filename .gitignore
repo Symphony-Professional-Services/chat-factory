@@ -7,3 +7,4 @@ processed_synthetic_data/
 google-service-account.json
 *.csv
 * copy.py
+service-account-key.json

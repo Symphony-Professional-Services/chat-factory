@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "chat-factory"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = "A modular framework for generating synthetic conversations"
 authors = ["Sean Koval <sean.koval@symphony.com>"]
 readme = "README.md"
 
@@ -11,8 +11,8 @@ google-cloud-aiplatform = "^1.66.0"
 scipy = "1.13.1"
 pandas = "^2.2.2"
 pydantic = "^2.9.2"
-
-
+vertexai = "^1.71.1"
+google-genai = "^1.7.0"
 
 [build-system]
 requires = ["poetry-core"]

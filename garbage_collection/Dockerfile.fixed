@@ -1,0 +1,36 @@
+FROM python:3.10-slim-buster
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy requirements first (for better layer caching)
+COPY pyproject.toml poetry.lock ./
+
+# Install Poetry and Google Cloud dependencies
+RUN pip install --no-cache-dir poetry && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir vertexai google-cloud-aiplatform google-api-python-client protobuf && \
+    pip install --no-cache-dir google-genai
+
+# Copy the rest of the application
+COPY . .
+
+# Install the application
+RUN pip install -e .
+
+# Make run.sh executable
+RUN chmod +x run.sh
+
+# Set environment variable for Google credentials
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/google-service-account.json
+# Default to mock provider if no credentials
+ENV USE_MOCK_PROVIDER=true
+
+# Copy the fixed entrypoint script
+COPY docker-entrypoint-fixed.sh /app/docker-entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Set the command to run when the container starts
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

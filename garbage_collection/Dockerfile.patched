@@ -1,0 +1,56 @@
+FROM python:3.10-slim-buster
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy requirements first (for better layer caching)
+COPY pyproject.toml poetry.lock ./
+
+# Install Poetry 
+RUN pip install --no-cache-dir poetry && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir vertexai google-cloud-aiplatform google-genai
+
+# Copy the rest of the application
+COPY . .
+
+# Install the application
+RUN pip install -e .
+
+# Make run.sh executable
+RUN chmod +x run.sh
+
+# Apply the import fix
+COPY fix_imports.py /app/
+RUN python /app/fix_imports.py
+
+# Set environment variable for Google credentials
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/google-service-account.json
+# Default to mock provider if no credentials
+ENV USE_MOCK_PROVIDER=true
+
+# Create an entrypoint script with provider selection logic
+RUN echo '#!/bin/bash\n\
+# check if USE_MOCK_PROVIDER is true or if credentials file does not exist\n\
+if [ "$USE_MOCK_PROVIDER" = "true" ] || [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then\n\
+    echo "Using mock LLM provider..."\n\
+    # Update config files to use mock provider\n\
+    sed -i '\'s/# LLM Settings/# LLM Settings\\nLLM_PROVIDER = "mock"/\'' /app/configs/financial_advisory.py\n\
+    sed -i '\'s/LLM_PROVIDER = "vertex_ai"/LLM_PROVIDER = "mock"/\'' /app/configs/financial_advisory.py 2>/dev/null || true\n\
+    exec python run_financial_advisory_mock.py "$@"\n\
+else\n\
+    echo "Using Vertex AI provider with credentials at $GOOGLE_APPLICATION_CREDENTIALS"\n\
+    # Make sure config uses vertex_ai provider\n\
+    if grep -q "LLM_PROVIDER" /app/configs/financial_advisory.py; then\n\
+        sed -i '\'s/LLM_PROVIDER = "mock"/LLM_PROVIDER = "vertex_ai"/\'' /app/configs/financial_advisory.py\n\
+    else\n\
+        sed -i '\'s/# LLM Settings/# LLM Settings\\nLLM_PROVIDER = "vertex_ai"/\'' /app/configs/financial_advisory.py\n\
+    fi\n\
+    exec python run_financial_advisory.py "$@"\n\
+fi' > /app/docker-entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Set the command to run when the container starts
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
