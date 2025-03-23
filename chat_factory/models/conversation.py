@@ -9,10 +9,11 @@ from typing import List, Dict, Any
 @dataclass
 class ChatLine:
     """
-    Represents a single line of conversation with speaker and text.
+    Represents a single line of conversation with speaker, text, and timestamp.
     """
     speaker: str  # "0" = client, "1" = advisor
     text: str
+    timestamp: str = None  # ISO format timestamp
 
 
 @dataclass

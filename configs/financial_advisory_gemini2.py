@@ -98,5 +98,38 @@ MAX_MESSAGES = 10
 # Distribution Configuration
 TOPIC_DISTRIBUTION = "uniform"
 
+# Datetime Distribution Configuration
+DATETIME_DISTRIBUTION_ENABLED = True
+DATETIME_STRATEGY = "business_hours"  # Options: business_hours, uniform, custom_period
+
+# Time period for conversations (ISO format)
+START_DATE = "2024-01-01T00:00:00"
+END_DATE = "2024-03-31T23:59:59"  # Q1 2024
+
+# Business hours settings
+BUSINESS_HOURS_START = 9  # 9 AM
+BUSINESS_HOURS_END = 17   # 5 PM
+WEEKEND_WEIGHT = 0.0      # 20% of conversations on weekends
+
+# Day of week weights (must sum to 1.0 for weekdays)
+WEEKDAY_WEIGHTS = {
+    'Monday': 0.25,
+    'Tuesday': 0.2,
+    'Wednesday': 0.2,
+    'Thursday': 0.2,
+    'Friday': 0.15
+}
+
+# Hour distribution weights
+HOUR_WEIGHTS = {
+    'morning': 0.3,     # 9am-12pm
+    'afternoon': 0.5,   # 12pm-5pm
+    'evening': 0.2      # 5pm-8pm
+}
+
+# Message timing settings
+MESSAGE_DELAY_MEAN = 60     # Mean delay between messages in seconds
+MESSAGE_DELAY_STD_DEV = 30  # Standard deviation for delay
+
 # Logging Configuration
 LOG_FILE = "synthetic_chat_generator.log"

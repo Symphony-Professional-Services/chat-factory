@@ -51,6 +51,7 @@ async def main():
             create_generation_strategy,
             create_few_shot_strategy
         )
+        from chat_factory.strategies.datetime_distribution.factory import create_datetime_strategy
         from chat_factory.generator import SyntheticChatGenerator
         
         # Add RUN_ID attribute to config if it's missing
@@ -71,13 +72,21 @@ async def main():
         few_shot_strategy = create_few_shot_strategy(config.FEW_SHOT_STRATEGY, config)
         llm_provider = create_llm_provider(config.PROVIDER, config)
         
+        # Create datetime strategy if enabled
+        datetime_strategy = create_datetime_strategy(config)
+        if datetime_strategy:
+            logging.info(f"Using datetime strategy: {config.DATETIME_STRATEGY}")
+            if hasattr(config, 'START_DATE') and hasattr(config, 'END_DATE'):
+                logging.info(f"Time period: {config.START_DATE} to {config.END_DATE}")
+        
         # Create the generator
         generator = SyntheticChatGenerator(
             config=config,
             taxonomy_strategy=taxonomy_strategy,
             generation_strategy=generation_strategy,
             few_shot_strategy=few_shot_strategy,
-            llm_provider=llm_provider
+            llm_provider=llm_provider,
+            datetime_strategy=datetime_strategy
         )
         
         # Run the generator
