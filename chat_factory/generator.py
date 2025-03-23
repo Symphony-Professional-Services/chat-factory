@@ -62,6 +62,9 @@ class SyntheticChatGenerator:
         # Setup output directories
         self.output_dir = self.setup_output_directory()
         
+        # Initialize client-advisor distribution
+        self.initialize_client_advisor_map()
+        
         # Initialize conversation manifest logger
         try:
             self.manifest_logger = self.setup_manifest_logger()
@@ -264,6 +267,15 @@ class SyntheticChatGenerator:
         """
         if self.manifest_logger is None:
             return
+        
+        # Track client-advisor pairing for analytics
+        if not hasattr(self, 'advisor_client_interactions'):
+            self.advisor_client_interactions = {}
+            
+        pair_key = f"{advisor_name}|{client_name}"
+        if pair_key not in self.advisor_client_interactions:
+            self.advisor_client_interactions[pair_key] = 0
+        self.advisor_client_interactions[pair_key] += 1
             
         manifest_data = {
             "conversation_id": conversation_id,
@@ -302,15 +314,159 @@ class SyntheticChatGenerator:
         
         logging.info(f"Saved conversation file: {file_path}")
     
+    def initialize_client_advisor_map(self):
+        """
+        Initialize the client-advisor mapping based on configuration.
+        This creates a dictionary that maps advisors to their clients.
+        """
+        # Check if client-advisor distribution is configured
+        if not hasattr(self.config, 'CLIENT_ADVISOR_DISTRIBUTION') or not self.config.CLIENT_ADVISOR_DISTRIBUTION.get("enabled", False):
+            # No custom distribution, each advisor can have any client
+            self.client_advisor_map = {
+                advisor: self.config.CLIENT_NAMES.copy() for advisor in self.config.ADVISOR_NAMES
+            }
+            return
+            
+        distribution = self.config.CLIENT_ADVISOR_DISTRIBUTION
+        distribution_type = distribution.get("distribution_type", "uniform")
+        
+        # Start with empty mapping
+        self.client_advisor_map = {advisor: [] for advisor in self.config.ADVISOR_NAMES}
+        
+        # Handle custom pairings if provided
+        custom_pairings = distribution.get("custom_pairings", {})
+        for advisor, clients in custom_pairings.items():
+            if advisor in self.client_advisor_map:
+                self.client_advisor_map[advisor] = clients.copy()
+        
+        # If using custom pairings only, we're done
+        if distribution_type == "custom" and custom_pairings:
+            # Ensure all advisors have at least some clients
+            for advisor, clients in self.client_advisor_map.items():
+                if not clients:
+                    self.client_advisor_map[advisor] = random.sample(
+                        self.config.CLIENT_NAMES, 
+                        min(3, len(self.config.CLIENT_NAMES))
+                    )
+            return
+        
+        # For algorithmic distributions (uniform or weighted)
+        remaining_advisors = [
+            advisor for advisor in self.config.ADVISOR_NAMES 
+            if not self.client_advisor_map[advisor]  # Skip advisors with custom pairings
+        ]
+        
+        # Handle special cases
+        special_cases = distribution.get("special_cases", {})
+        low_client_advisors = special_cases.get("low_client_advisors", [])
+        high_client_advisors = special_cases.get("high_client_advisors", [])
+        
+        # Remove special case advisors from regular distribution
+        for advisor in low_client_advisors + high_client_advisors:
+            if advisor in remaining_advisors:
+                remaining_advisors.remove(advisor)
+        
+        # Apply distribution based on type
+        if distribution_type == "weighted":
+            # Calculate ratios for Pareto-like distribution
+            high_volume_ratio = distribution.get("high_volume_advisor_ratio", 0.2)
+            high_client_ratio = distribution.get("high_volume_client_ratio", 0.2)
+            
+            # Calculate number of high-volume advisors (excluding special cases)
+            num_high_volume = max(1, int(len(remaining_advisors) * high_volume_ratio))
+            high_volume_advisors = random.sample(remaining_advisors, num_high_volume)
+            regular_advisors = [adv for adv in remaining_advisors if adv not in high_volume_advisors]
+            
+            # Assign clients to high-volume advisors (large client list)
+            clients_per_high_volume = max(
+                15,  # Minimum 15 clients (increased from 5)
+                int((len(self.config.CLIENT_NAMES) * high_client_ratio) / len(high_volume_advisors))
+            )
+            
+            # Assign clients to regular advisors (smaller client list)
+            clients_per_regular = max(
+                8,  # Minimum 8 clients (increased from 1)
+                int((len(self.config.CLIENT_NAMES) * (1 - high_client_ratio)) / len(regular_advisors))
+            ) if regular_advisors else 0
+            
+            # Assign clients
+            for advisor in high_volume_advisors:
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES,
+                    min(clients_per_high_volume, len(self.config.CLIENT_NAMES))
+                )
+                
+            for advisor in regular_advisors:
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES,
+                    min(clients_per_regular, len(self.config.CLIENT_NAMES))
+                )
+                
+        else:  # uniform distribution
+            # Distribute clients evenly
+            clients_per_advisor = max(
+                15,  # Minimum 15 clients per advisor (increased from 1)
+                int(len(self.config.CLIENT_NAMES) * 0.7 / len(remaining_advisors))
+            )
+            
+            for advisor in remaining_advisors:
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES,
+                    min(clients_per_advisor, len(self.config.CLIENT_NAMES))
+                )
+        
+        # Handle special cases
+        for advisor in low_client_advisors:
+            if advisor in self.client_advisor_map:
+                # Assign very few clients (1-2)
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES,
+                    min(random.randint(1, 2), len(self.config.CLIENT_NAMES))
+                )
+                
+        for advisor in high_client_advisors:
+            if advisor in self.client_advisor_map:
+                # Assign many clients (40-60% of all clients)
+                client_count = int(len(self.config.CLIENT_NAMES) * random.uniform(0.10, 0.20))
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES,
+                    min(client_count, len(self.config.CLIENT_NAMES))
+                )
+        
+        # Ensure every advisor has at least one client
+        for advisor, clients in self.client_advisor_map.items():
+            if not clients:
+                self.client_advisor_map[advisor] = random.sample(
+                    self.config.CLIENT_NAMES, 
+                    min(1, len(self.config.CLIENT_NAMES))
+                )
+                
+        # Log the distribution
+        client_counts = {advisor: len(clients) for advisor, clients in self.client_advisor_map.items()}
+        logging.info(f"Client-advisor distribution: {client_counts}")
+    
     def select_advisors_clients(self) -> Tuple[str, str]:
         """
-        Select a random advisor-client pair from available names.
+        Select a random advisor-client pair from available names,
+        respecting the client-advisor distribution if configured.
         
         Returns:
             Tuple of (advisor_name, client_name)
         """
+        # Initialize client-advisor map if not already done
+        if not hasattr(self, 'client_advisor_map'):
+            self.initialize_client_advisor_map()
+            
+        # Select a random advisor
         advisor = random.choice(self.config.ADVISOR_NAMES)
-        client = random.choice(self.config.CLIENT_NAMES)
+        
+        # Select a client for this advisor based on the mapping
+        if advisor in self.client_advisor_map and self.client_advisor_map[advisor]:
+            client = random.choice(self.client_advisor_map[advisor])
+        else:
+            # Fallback if no clients are assigned to this advisor
+            client = random.choice(self.config.CLIENT_NAMES)
+            
         logging.debug(f"Selected advisor-client pair: {advisor} - {client}")
         return advisor, client
     
@@ -325,6 +481,33 @@ class SyntheticChatGenerator:
         logging.debug(f"Selected conversation type: {conversation_type}")
         return conversation_type
     
+    def calculate_conversation_count(self):
+        """Calculate conversation count based on config settings."""
+        if not hasattr(self.config, 'DAILY_CONVERSATION_TARGET') or self.config.DAILY_CONVERSATION_TARGET is None:
+            return self.config.NUM_CONVERSATIONS
+            
+        if not hasattr(self.config, 'START_DATE') or not hasattr(self.config, 'END_DATE'):
+            logging.warning("DAILY_CONVERSATION_TARGET requires START_DATE and END_DATE. Using NUM_CONVERSATIONS instead.")
+            return self.config.NUM_CONVERSATIONS
+            
+        # Calculate days between dates
+        start = datetime.fromisoformat(self.config.START_DATE)
+        end = datetime.fromisoformat(self.config.END_DATE)
+        days = (end - start).days + 1
+        
+        # Calculate total conversations based on daily target
+        calculated_count = int(days * self.config.DAILY_CONVERSATION_TARGET)
+        
+        # Handle enforcement preference
+        if hasattr(self.config, 'ENFORCE_EXACT_COUNT') and self.config.ENFORCE_EXACT_COUNT:
+            if calculated_count != self.config.NUM_CONVERSATIONS:
+                logging.warning(f"Calculated count ({calculated_count}) differs from NUM_CONVERSATIONS ({self.config.NUM_CONVERSATIONS})")
+                logging.warning(f"Using NUM_CONVERSATIONS due to ENFORCE_EXACT_COUNT=True")
+            return self.config.NUM_CONVERSATIONS
+        else:
+            logging.info(f"Using calculated conversation count: {calculated_count} based on {self.config.DAILY_CONVERSATION_TARGET} per day for {days} days")
+            return calculated_count
+    
     async def generate_synthetic_data(self):
         """
         Main method to generate synthetic data.
@@ -332,8 +515,11 @@ class SyntheticChatGenerator:
         This orchestrates the entire process of generating multiple conversations
         according to the configuration.
         """
+        # Calculate the number of conversations to generate
+        num_conversations = self.calculate_conversation_count()
+        
         logging.info(f"Starting synthetic data generation with run_id: {self.run_id}")
-        logging.info(f"Generating {self.config.NUM_CONVERSATIONS} conversations")
+        logging.info(f"Generating {num_conversations} conversations")
         
         # Initialize the LLM provider
         await self.llm_provider.initialize()
@@ -359,6 +545,30 @@ class SyntheticChatGenerator:
         
         # Track conversation pairing to group multiple conversations between the same people
         self.conversation_buffer = {}
+        
+        # Log statistics about client-advisor distribution
+        if hasattr(self, 'client_advisor_map'):
+            client_counts = {advisor: len(clients) for advisor, clients in self.client_advisor_map.items()}
+            # Sort advisors by client count for better visualization
+            sorted_counts = sorted(client_counts.items(), key=lambda x: x[1], reverse=True)
+            
+            # Calculate summary statistics
+            total_clients = sum(client_counts.values())
+            avg_clients = total_clients / len(client_counts) if client_counts else 0
+            min_clients = min(client_counts.values()) if client_counts else 0
+            max_clients = max(client_counts.values()) if client_counts else 0
+            
+            logging.info(f"\n===== CLIENT-ADVISOR DISTRIBUTION =====")
+            logging.info(f"Total unique client-advisor pairings: {total_clients}")
+            logging.info(f"Average clients per advisor: {avg_clients:.2f}")
+            logging.info(f"Range: {min_clients} to {max_clients} clients per advisor")
+            
+            # Display distribution
+            logging.info("\n----- Clients per Advisor -----")
+            for advisor, count in sorted_counts:
+                percentage = (count / len(self.config.CLIENT_NAMES)) * 100
+                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                logging.info(f"{advisor}: {count} clients ({percentage:.1f}%) {bar}")
         
         for i in range(1, self.config.NUM_CONVERSATIONS + 1):
             try:
@@ -413,6 +623,220 @@ class SyntheticChatGenerator:
             if conversation_file.conversations:
                 advisor_name, client_name = buffer_key.split('_', 1)
                 self.save_conversation_file(advisor_name, client_name, conversation_file)
+        
+        # Log summary of client-advisor interactions
+        if hasattr(self, 'advisor_client_interactions') and self.advisor_client_interactions:
+            # Sort by number of interactions
+            sorted_interactions = sorted(
+                self.advisor_client_interactions.items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            )
+            
+            # Group by advisor
+            advisor_interaction_counts = {}
+            advisor_unique_clients = {}
+            for pair, count in sorted_interactions:
+                advisor, client = pair.split('|')
+                if advisor not in advisor_interaction_counts:
+                    advisor_interaction_counts[advisor] = 0
+                    advisor_unique_clients[advisor] = set()
+                advisor_interaction_counts[advisor] += count
+                advisor_unique_clients[advisor].add(client)
+            
+            # Log advisor activity summary
+            logging.info("\n===== ADVISOR-CLIENT INTERACTION SUMMARY =====")
+            logging.info(f"Total unique advisor-client pairs with conversations: {len(self.advisor_client_interactions)}")
+            
+            # Most active advisors
+            logging.info("\n----- Advisor Activity (by conversation count) -----")
+            # Calculate max count for scaling histogram bars
+            max_advisor_count = max(advisor_interaction_counts.values()) if advisor_interaction_counts else 0
+            
+            for advisor, count in sorted(advisor_interaction_counts.items(), key=lambda x: x[1], reverse=True):
+                unique_count = len(advisor_unique_clients[advisor])
+                percentage = (count / self.config.NUM_CONVERSATIONS) * 100
+                # Scale bar length by percentage for consistent visualization
+                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                logging.info(f"{advisor}: {count} conversations ({percentage:.1f}%), {unique_count} unique clients {bar}")
+            
+            # Client distribution (how many advisors each client has)
+            client_advisor_counts = {}
+            for pair in self.advisor_client_interactions:
+                advisor, client = pair.split('|')
+                if client not in client_advisor_counts:
+                    client_advisor_counts[client] = set()
+                client_advisor_counts[client].add(advisor)
+            
+            # Convert sets to counts
+            client_advisor_counts = {client: len(advisors) for client, advisors in client_advisor_counts.items()}
+            
+            # Group clients by number of advisors
+            advisors_per_client = {}
+            for client, count in client_advisor_counts.items():
+                if count not in advisors_per_client:
+                    advisors_per_client[count] = 0
+                advisors_per_client[count] += 1
+            
+            # Log client distribution 
+            logging.info("\n----- Client Distribution (by advisor count) -----")
+            for adv_count in sorted(advisors_per_client.keys()):
+                client_count = advisors_per_client[adv_count]
+                percentage = (client_count / len(client_advisor_counts)) * 100
+                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                logging.info(f"Clients with {adv_count} advisors: {client_count} clients ({percentage:.1f}%) {bar}")
+            
+            # Visual histogram of advisors by number of clients
+            clients_per_advisor_histogram = {}
+            for advisor, clients in advisor_unique_clients.items():
+                client_count = len(clients)
+                if client_count not in clients_per_advisor_histogram:
+                    clients_per_advisor_histogram[client_count] = 0
+                clients_per_advisor_histogram[client_count] += 1
+            
+            logging.info("\n----- Distribution of Advisors by Client Count -----")
+            # Calculate max for scaling histogram
+            max_bin_count = max(clients_per_advisor_histogram.values()) if clients_per_advisor_histogram else 0
+            
+            for client_count in sorted(clients_per_advisor_histogram.keys()):
+                advisor_count = clients_per_advisor_histogram[client_count]
+                percentage = (advisor_count / len(advisor_unique_clients)) * 100
+                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                logging.info(f"Advisors with {client_count} clients: {advisor_count} advisors ({percentage:.1f}%) {bar}")
+            
+            # Generate heat map of conversation density
+            # Create matrix showing conversation count for each advisor-client pair
+            logging.info("\n----- Conversation Density Heat Map -----")
+            top_advisors = [adv for adv, _ in sorted(advisor_interaction_counts.items(), 
+                                                key=lambda x: x[1], reverse=True)[:5]]
+            top_clients = []
+            # Find clients who have had conversations with these top advisors
+            for advisor in top_advisors:
+                for pair in self.advisor_client_interactions:
+                    adv, client = pair.split('|')
+                    if adv == advisor and client not in top_clients:
+                        top_clients.append(client)
+                        if len(top_clients) >= 5:  # Limit to 5 clients for readability
+                            break
+            
+            # Generate the heat map header
+            logging.info(f"{'Advisor/Client':<20} | " + " | ".join(f"{client:<15}" for client in top_clients))
+            logging.info("-" * 20 + "-+-" + "-+-".join("-" * 15 for _ in top_clients))
+            
+            # Generate heat map rows
+            for advisor in top_advisors:
+                row = f"{advisor:<20} | "
+                for client in top_clients:
+                    pair_key = f"{advisor}|{client}"
+                    conv_count = self.advisor_client_interactions.get(pair_key, 0)
+                    # Generate heat indicator
+                    if conv_count == 0:
+                        heat = " " * 15  # Empty for zero
+                    else:
+                        # Scale heat indicators by count
+                        heat_chars = "▁▂▃▄▅▆▇█"  # Ascending heat indicators
+                        max_pair_count = max(self.advisor_client_interactions.values())
+                        heat_idx = min(7, int((conv_count / max_pair_count) * 8)) if max_pair_count > 0 else 0
+                        heat = f"{conv_count} {heat_chars[heat_idx] * 5:<10}"
+                    row += f"{heat:<15} | "
+                logging.info(row)
+            
+            # Top advisor-client pairs
+            logging.info("\n----- Top Advisor-Client Pairs -----")
+            for i, (pair, count) in enumerate(sorted_interactions[:10]):  # Show top 10
+                advisor, client = pair.split('|')
+                percentage = (count / self.config.NUM_CONVERSATIONS) * 100
+                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                logging.info(f"{i+1}. {advisor} - {client}: {count} conversations ({percentage:.1f}%) {bar}")
+                
+            # Write detailed interaction data to a file
+            try:
+                interaction_path = Path(self.config.OUTPUT_DIR) / f"advisor_client_interactions_{self.run_id}.txt"
+                with open(interaction_path, 'w') as f:
+                    f.write("===== ADVISOR-CLIENT INTERACTIONS =====\n")
+                    f.write(f"Total pairs: {len(self.advisor_client_interactions)}\n\n")
+                    
+                    # Write histogram visualization to file
+                    f.write("--- Advisor Activity Histogram ---\n")
+                    # Create ASCII histogram representation
+                    max_name_length = max(len(advisor) for advisor in advisor_interaction_counts.keys())
+                    max_count = max(advisor_interaction_counts.values())
+                    histogram_width = 50  # Width of histogram bars
+                    
+                    for advisor, count in sorted(advisor_interaction_counts.items(), key=lambda x: x[1], reverse=True):
+                        unique_count = len(advisor_unique_clients[advisor])
+                        bar_length = int((count / max_count) * histogram_width) if max_count > 0 else 0
+                        bar = '█' * bar_length
+                        percentage = (count / self.config.NUM_CONVERSATIONS) * 100
+                        f.write(f"{advisor:<{max_name_length}} | {bar} {count} ({percentage:.1f}%), {unique_count} clients\n")
+                    
+                    # Distribution of advisors by client count
+                    f.write("\n--- Distribution of Advisors by Client Count ---\n")
+                    for client_count in sorted(clients_per_advisor_histogram.keys()):
+                        advisor_count = clients_per_advisor_histogram[client_count]
+                        f.write(f"Advisors with {client_count} clients: {advisor_count}\n")
+                    
+                    # Distribution of clients by advisor count
+                    f.write("\n--- Distribution of Clients by Advisor Count ---\n")
+                    for adv_count in sorted(advisors_per_client.keys()):
+                        client_count = advisors_per_client[adv_count]
+                        f.write(f"Clients with {adv_count} advisors: {client_count}\n")
+                    
+                    # Complete interaction matrix
+                    f.write("\n--- Complete Interaction Matrix ---\n")
+                    # Create matrix header with all clients
+                    all_clients = sorted(list(set(client for pair in self.advisor_client_interactions.keys() 
+                                               for _, client in [pair.split('|')])))
+                    
+                    # Write CSV-style matrix (for potential import into spreadsheet software)
+                    f.write("Advisor," + ",".join(all_clients) + "\n")
+                    
+                    for advisor in sorted(advisor_interaction_counts.keys()):
+                        row = [advisor]
+                        for client in all_clients:
+                            pair_key = f"{advisor}|{client}"
+                            conv_count = self.advisor_client_interactions.get(pair_key, 0)
+                            row.append(str(conv_count))
+                        f.write(",".join(row) + "\n")
+                    
+                    # By Advisor
+                    f.write("\n--- By Advisor ---\n")
+                    for advisor, count in sorted(advisor_interaction_counts.items(), key=lambda x: x[1], reverse=True):
+                        unique_count = len(advisor_unique_clients[advisor])
+                        f.write(f"{advisor}: {count} conversations, {unique_count} unique clients\n")
+                        # List all clients for this advisor
+                        for client in sorted(advisor_unique_clients[advisor]):
+                            pair_key = f"{advisor}|{client}"
+                            conv_count = self.advisor_client_interactions.get(pair_key, 0)
+                            f.write(f"  - {client}: {conv_count} conversations\n")
+                    
+                    # By Client
+                    f.write("\n--- By Client ---\n")
+                    client_conversation_counts = {}
+                    for pair, count in self.advisor_client_interactions.items():
+                        _, client = pair.split('|')
+                        if client not in client_conversation_counts:
+                            client_conversation_counts[client] = 0
+                        client_conversation_counts[client] += count
+                    
+                    for client, count in sorted(client_conversation_counts.items(), key=lambda x: x[1], reverse=True):
+                        f.write(f"{client}: {count} total conversations\n")
+                        # List all advisors for this client
+                        for advisor in [adv for adv, cli in [pair.split('|') for pair in self.advisor_client_interactions if client in pair]]:
+                            pair_key = f"{advisor}|{client}"
+                            conv_count = self.advisor_client_interactions.get(pair_key, 0)
+                            if conv_count > 0:
+                                f.write(f"  - {advisor}: {conv_count} conversations\n")
+                        
+                    # By Advisor-Client Pair
+                    f.write("\n--- By Advisor-Client Pair ---\n")
+                    for pair, count in sorted_interactions:
+                        advisor, client = pair.split('|')
+                        f.write(f"{advisor} - {client}: {count}\n")
+                        
+                logging.info(f"\nDetailed advisor-client interaction data written to: {interaction_path}")
+            except Exception as e:
+                logging.warning(f"Could not write advisor-client interaction file: {e}")
         
         # Log summary of temporal distribution
         if hasattr(self, 'all_timestamps') and self.all_timestamps:
