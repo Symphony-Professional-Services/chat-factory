@@ -17,15 +17,17 @@ TAXONOMY_STRATEGY = "financial_advisory"
 GENERATION_STRATEGY = "financial_advisory"
 FEW_SHOT_STRATEGY = "basic"
 
-# LLM Settings
-TEMPERATURE = 0.3  # Slightly higher temperature for Gemini 2.0
-TOP_P = 0.95
-TOP_K = 40
-MAX_OUTPUT_TOKENS = 1024
+# LLM Settings - Optimized for Gemini 2.0
+LLM_PROVIDER = "vertex_ai"
+TEMPERATURE = 0.7  # Higher temperature for more creative, varied responses
+TOP_P = 0.92      # Slightly reduced from 0.95 for better coherence
+TOP_K = 40        # Keep top_k the same
+MAX_OUTPUT_TOKENS = 2048  # Increased to allow for longer, more detailed responses
 
-PRESENCE_PENALTY = 0.0
-FREQUENCY_PENALTY = 0.0
-#STOP_SEQUENCES = ["\n"]
+# Penalties to improve the diversity of language used
+PRESENCE_PENALTY = 0.2  # Added presence penalty to discourage repetition
+FREQUENCY_PENALTY = 0.3  # Added frequency penalty to encourage diverse vocabulary
+#STOP_SEQUENCES = ["\n"]  # Keeping stop sequences commented out
 
 
 # Input Configuration
@@ -116,10 +118,10 @@ CLIENT_NAMES = [
 # Client-Advisor Distribution Configuration
 CLIENT_ADVISOR_DISTRIBUTION = {
     "enabled": True,  # Enable custom distribution of clients among advisors
-    "distribution_type": "uniform",  # Changed from uniform to weighted for Pareto distribution
+    "distribution_type": "weighted",  # Using weighted for Pareto-like distribution
     # Weighted distribution - Pareto-like (20% of advisors have 80% of clients)
     "high_volume_advisor_ratio": 0.20,  # 20% of advisors are high-volume
-    "high_volume_client_ratio": 0.80,  # These advisors handle 80% of clients
+    "high_volume_client_ratio": 0.50,  # These advisors handle 80% of clients
     # Custom distribution allows manually setting specific advisor-client pairs
     "custom_pairings": {
         # Example: "Alice Johnson": ["Allen Brooks", "Edward Johnson", "Layla Washington"]
@@ -161,6 +163,9 @@ MESSAGE_FORMATS = {
 # Few-Shot Examples Configuration
 FEW_SHOT_EXAMPLES_DIR = "few_shot_examples"
 
+# Prompt Template Configuration
+PROMPT_TEMPLATE_PATH = "prompts/financial_advisory/conversation_prompt.txt"
+
 # Company Targeting Configuration (Optional for Financial Advisory)
 COMPANY_DATA_FILE = ""
 COMPANY_TARGETING = {
@@ -184,8 +189,8 @@ JSON_VERSION = "5"
 
 # Generation Volume Configuration
 NUM_CONVERSATIONS = 20  # Increased to generate more diverse data
-MIN_MESSAGES = 2
-MAX_MESSAGES = 10
+MIN_MESSAGES = 10     # Increased minimum message count for deeper conversations with multiple topics
+MAX_MESSAGES = 18     # Increased maximum message count to allow for more detailed exchanges and multiple subtopics
 
 # Daily average conversations (alternative to NUM_CONVERSATIONS) 
 # DAILY_CONVERSATION_TARGET = 5  # Average conversations per day
