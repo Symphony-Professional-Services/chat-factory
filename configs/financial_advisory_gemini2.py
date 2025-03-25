@@ -19,7 +19,7 @@ FEW_SHOT_STRATEGY = "basic"
 
 # LLM Settings - Optimized for Gemini 2.0
 LLM_PROVIDER = "vertex_ai"
-TEMPERATURE = 0.7  # Higher temperature for more creative, varied responses
+TEMPERATURE = 0.5  # Higher temperature for more creative, varied responses
 TOP_P = 0.92      # Slightly reduced from 0.95 for better coherence
 TOP_K = 40        # Keep top_k the same
 MAX_OUTPUT_TOKENS = 2048  # Increased to allow for longer, more detailed responses
@@ -166,13 +166,16 @@ FEW_SHOT_EXAMPLES_DIR = "few_shot_examples"
 # Prompt Template Configuration
 PROMPT_TEMPLATE_PATH = "prompts/financial_advisory/conversation_prompt.txt"
 
-# Company Targeting Configuration (Optional for Financial Advisory)
-COMPANY_DATA_FILE = ""
+# Company Targeting Configuration
+# Set COMPANY_DATA_FILE to the path of your CSV file with company data
+# CSV should have columns: name, ticker, sector, variations, misspellings, formal_name
+COMPANY_DATA_FILE = "data/company_data.csv"
 COMPANY_TARGETING = {
-    "enabled": False,
-    "probability": 0.8,
-    "min_companies": 1,
-    "max_companies": 3
+    "enabled": True,          # Set to True to enable company targeting
+    "probability": 0.3,       # 30% of conversations will include company mentions
+    "min_companies": 1,       # Minimum companies to include in a conversation
+    "max_companies": 3,       # Maximum companies to include in a conversation
+    "decision_model": "topic_based"  # Future extension point for smarter company selection
 }
 
 # Message Length Configuration

@@ -1,0 +1,61 @@
+You are an expert dialog generator AI that creates realistic synthetic conversations between financial advisors and their clients. Your goal is to create highly realistic, coherent dialogues that sound like genuine interactions between finance professionals and their clients.
+
+Task: Generate a detailed, coherent conversation between {advisor_name} (a {persona}, age {advisor_age}, {communication_style}) and their client {client_name}.
+
+# CONVERSATION PARAMETERS
+- Category: {category}
+- Topic Area: {main_topic}
+- Specific Topic: {subtopic}
+- Conversation Type: {conversation_type}
+- Message Format: {message_format}
+- Number of Messages: Aim for approximately {num_messages} messages total
+
+# CONVERSATIONAL DYNAMICS REQUIREMENTS
+1. Create a conversation that mimics professional semi formal language on a chhat messaging platforms (like Slack or Microsoft Teams)
+2. Maintain consistent character traits throughout the dialogue
+3. The advisor should demonstrate subject-matter expertise but with a conversational messaging tone
+4. The client should have realistic concerns and questions using natural chat language
+5. Each message must logically follow from the previous messages
+6. Use a mix of message lengths typical of chat platforms - some brief, some more detailed
+7. Include specific details relevant to {main_topic} in a way that feels natural for a messaging conversation
+8. Occasional brief acknowledgments are fine when they reflect natural chat flow
+9. Sometimes break longer points into multiple consecutive messages (as people do when chatting)
+
+# CONVERSATION FLOW GUIDANCE
+- Start with natural, varied greetings (avoid overusing "got a sec?" - use diverse openings like "Hi {client_name}," "Morning {client_name}," "Question for you {client_name}," etc.)
+- DO NOT have participants explicitly identify themselves (they already know who they're talking to)
+- Establish the context and reason for the conversation early but conversationally
+- Progress naturally through the topic with questions/answers/explanations, using a messaging platform tone
+- Use shorter, more direct messages rather than lengthy paragraphs
+- Include natural message breaks where appropriate (someone might respond before a thought is complete)
+- Use occasional professional chat shorthand where appropriate (like "Let me know what you think" → "LMK your thoughts")
+- End with clear next steps, a summary, or appropriate conclusion
+- IMPORTANT: The conversation should feel like authentic back-and-forth messaging, not a formal dialogue
+- Generate approximately {num_messages} messages total for this conversation
+
+# COMPANY REFERENCES
+During the conversation, naturally incorporate discussion about these companies at appropriate moments:
+{key_companies_text}
+
+Guidelines for company references:
+- Integrate mentions organically based on the financial context
+- Include specific details about the companies that a financial advisor would know
+- Reference company performance, news, or relevance to the client's financial situation
+- Distribute references throughout the conversation, not just at the beginning or end
+
+# OUTPUT FORMAT INSTRUCTIONS
+Format the conversation as a series of JSON objects, EXACTLY as follows:
+{{"speaker": "advisor", "text": "Hi {client_name}, do you have a moment to discuss the portfolio rebalancing?"}}
+{{"speaker": "client", "text": "Sure {advisor_name}, I've been meaning to follow up on that. What's the latest?"}}
+...
+
+IMPORTANT: 
+- Use "advisor" and "client" as the speaker values (not names)
+- Include only the conversation in the required JSON format
+- Messages should resemble chat platform exchanges - concise, direct, and conversational
+- Use the actual names ({client_name} and {advisor_name}) in the conversation naturally
+- Messages should vary in length - some brief, some more detailed
+- Occasionally include quick follow-up messages from the same speaker
+- Do not use placeholder text - use the actual names provided
+- Do not include any text outside the JSON format
+- Use ONLY standard ASCII characters (avoid smart quotes, em-dashes, etc.) - use regular quotes ("), apostrophes ('), and hyphens (-)

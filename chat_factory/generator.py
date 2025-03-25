@@ -209,14 +209,47 @@ class SyntheticChatGenerator:
             chat_lines = self.datetime_strategy.apply_timestamps_to_conversation(
                 chat_lines, message_timestamps
             )
-        
+            
+        # Analyze company mentions in the conversation if company targeting is enabled
+        company_mentions = []  # Start with an empty list by default
+        if hasattr(self.generation_strategy, 'check_company_mentions') and hasattr(self.generation_strategy, 'company_targeting'):
+            # Only check for company mentions when targeting is explicitly enabled for THIS conversation
+            if manifest_blueprint.get("company_targeting_enabled", False):
+                # Start with companies targeted in the prompt
+                company_mentions = manifest_blueprint.get("key_companies", [])
+                
+                # Convert chat_lines back to the format expected by check_company_mentions
+                formatted_lines = [{"speaker": line.speaker, "text": line.text} for line in chat_lines]
+                mention_results = self.generation_strategy.check_company_mentions(formatted_lines)
+                
+                # Only log at DEBUG level for individual conversations to avoid console clutter
+                company_tag = "[COMPANY METRICS]"
+                # Log details about company mentions
+                if mention_results["has_company_mentions"]:
+                    logging.debug(f"{company_tag} Conversation {conv_number}: {mention_results['total_mentions']} " +
+                               f"mentions of {len(mention_results['companies_found'])} companies")
+                    
+                    # Log individual companies found at debug level
+                    companies_str = ", ".join(mention_results["companies_found"])
+                    logging.debug(f"{company_tag} Companies found: {companies_str}")
+                    
+                    # Use the actual companies found in the text
+                    company_mentions = mention_results["companies_found"]
+                else:
+                    # Log when companies were targeted but not found (warnings are kept)
+                    target_companies = ", ".join(company_mentions)
+                    logging.debug(f"{company_tag} No company mentions found despite targeting: {target_companies}")
+            else:
+                # For non-targeted conversations, explicitly log that we're not expecting companies
+                logging.debug(f"[COMPANY METRICS] Conversation {conv_number}: Company targeting disabled - no companies expected")
+                
         conversation = SingleConversation(
             conversation_id=conversation_id,
             timestamp=conversation_timestamp,
             category=category,
             topic=formatted_topic,
             lines=chat_lines,
-            company_mentions=manifest_blueprint.get("key_companies", [])
+            company_mentions=company_mentions
         )
         
         # Log manifest information
@@ -276,7 +309,27 @@ class SyntheticChatGenerator:
         if pair_key not in self.advisor_client_interactions:
             self.advisor_client_interactions[pair_key] = 0
         self.advisor_client_interactions[pair_key] += 1
-            
+        
+        # Company mention data (from generation_strategy.check_company_mentions results)
+        company_mention_count = 0
+        company_mentions_by_name = {}
+        companies_found = []
+        has_company_mentions = False
+        
+        # Only track company metrics when targeting was explicitly enabled for this conversation
+        if manifest_blueprint.get("company_targeting_enabled", False):
+            # Check if company_mentions is populated
+            if hasattr(conversation, 'company_mentions') and conversation.company_mentions:
+                companies_found = conversation.company_mentions
+                has_company_mentions = True
+                # For each found company, add it to the count
+                for company in companies_found:
+                    if company not in company_mentions_by_name:
+                        company_mentions_by_name[company] = 0
+                    company_mentions_by_name[company] += 1
+                    company_mention_count += 1
+        
+        # Track company metrics data
         manifest_data = {
             "conversation_id": conversation_id,
             "conv_number": conv_number,
@@ -287,7 +340,11 @@ class SyntheticChatGenerator:
             "subtopic": subtopic,
             "timestamp": conversation.timestamp,  # Use conversation timestamp
             "company_targeting_enabled": manifest_blueprint.get("company_targeting_enabled", False),
-            "key_companies": manifest_blueprint.get("key_companies", [])
+            "key_companies": manifest_blueprint.get("key_companies", []),
+            "company_mention_count": company_mention_count,
+            "company_mentions_by_name": company_mentions_by_name,
+            "companies_found": companies_found,
+            "has_company_mentions": has_company_mentions
         }
         
         self.manifest_logger.info(json.dumps(manifest_data))
@@ -838,6 +895,146 @@ class SyntheticChatGenerator:
             except Exception as e:
                 logging.warning(f"Could not write advisor-client interaction file: {e}")
         
+        # Track company mention metrics if company targeting is enabled
+        if hasattr(self, 'manifest_logger') and self.manifest_logger:
+            try:
+                # Parse each line of the manifest log to count company metrics
+                from collections import Counter
+
+                company_metrics = {
+                    'total_conversations': self.config.NUM_CONVERSATIONS,
+                    'total_conversations_with_companies': 0,
+                    'total_company_mentions': 0,
+                    'company_mention_counts': Counter(),
+                    'company_enabled_count': 0,
+                    'conversations_with_companies': {
+                        '1_company': 0,
+                        '2_companies': 0, 
+                        '3+_companies': 0
+                    }
+                }
+                
+                manifest_log_file = None
+                if hasattr(self.config, 'CONVERSATION_MANIFEST_DIR'):
+                    manifest_dir = Path(self.config.CONVERSATION_MANIFEST_DIR)
+                    manifest_log_file = manifest_dir / f"conversation_manifest_{self.run_id}.log"
+                
+                if manifest_log_file and manifest_log_file.exists():
+                    with open(manifest_log_file, 'r') as f:
+                        for line in f:
+                            try:
+                                data = json.loads(line.strip())
+                                
+                                # Count conversations with targeting enabled
+                                if data.get('company_targeting_enabled'):
+                                    company_metrics['company_enabled_count'] += 1
+                                    
+                                    # For targeted conversations, check if companies actually appear in text
+                                    # Check the companies_found field which contains detected companies 
+                                    companies_found = data.get('companies_found', [])
+                                    is_targeted_conversation = data.get('company_targeting_enabled', False)
+                                    
+                                    # Only count company metrics for conversations where targeting was enabled
+                                    if is_targeted_conversation:
+                                        if companies_found:
+                                            company_metrics['total_conversations_with_companies'] += 1
+                                            
+                                            # Track distribution of company counts
+                                            num_companies = len(companies_found)
+                                            if num_companies == 1:
+                                                company_metrics['conversations_with_companies']['1_company'] += 1
+                                            elif num_companies == 2:
+                                                company_metrics['conversations_with_companies']['2_companies'] += 1
+                                            elif num_companies >= 3:
+                                                company_metrics['conversations_with_companies']['3+_companies'] += 1
+                                    
+                                            # Track counts by company name from the companies_found list
+                                            for company in companies_found:
+                                                company_metrics['company_mention_counts'][company] += 1
+                                                company_metrics['total_company_mentions'] += 1
+                            except json.JSONDecodeError:
+                                continue
+                    
+                    # Log company mention metrics if any data was collected
+                    if company_metrics['company_enabled_count'] > 0:
+                        logging.info("\n===== COMPANY TARGETING METRICS =====")
+                        
+                        # Configuration summary
+                        probability = self.generation_strategy.company_targeting.get("probability", 0.4) if hasattr(self.generation_strategy, 'company_targeting') else 0.4
+                        logging.info(f"Company targeting configuration: probability={probability:.2f}, "
+                                     f"min_companies={self.generation_strategy.company_targeting.get('min_companies', 1)}, "
+                                     f"max_companies={self.generation_strategy.company_targeting.get('max_companies', 3)}")
+                        
+                        # Base metrics
+                        enabled_pct = (company_metrics['company_enabled_count'] / company_metrics['total_conversations'] * 100)
+                        logging.info(f"Conversations with company targeting enabled: {company_metrics['company_enabled_count']} " + 
+                                    f"({enabled_pct:.1f}% of all conversations)")
+                        
+                        # Expected number of conversations with company targeting
+                        expected_count = int(company_metrics['total_conversations'] * probability)
+                        logging.info(f"Expected conversations with company targeting: {expected_count} " + 
+                                    f"({probability*100:.1f}% of all conversations)")
+                        
+                        # Conversations with company mentions
+                        success_pct = (company_metrics['total_conversations_with_companies'] / company_metrics['company_enabled_count'] * 100) if company_metrics['company_enabled_count'] > 0 else 0
+                        overall_pct = (company_metrics['total_conversations_with_companies'] / company_metrics['total_conversations'] * 100)
+                        
+                        logging.info(f"Conversations with at least one company mentioned: {company_metrics['total_conversations_with_companies']} " + 
+                                   f"({success_pct:.1f}% success rate, {overall_pct:.1f}% of all conversations)")
+                        
+                        # Distribution of number of companies per conversation
+                        logging.info("\n----- Company Count Distribution -----")
+                        for company_count, count in company_metrics['conversations_with_companies'].items():
+                            if company_metrics['total_conversations_with_companies'] > 0:
+                                percentage = (count / company_metrics['total_conversations_with_companies']) * 100
+                                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                                logging.info(f"{company_count}: {count} conversations ({percentage:.1f}%) {bar}")
+                        
+                        # Average metrics
+                        if company_metrics['total_conversations_with_companies'] > 0:
+                            avg_mentions = company_metrics['total_company_mentions'] / company_metrics['total_conversations_with_companies']
+                            logging.info(f"\nAverage company mentions per conversation (when present): {avg_mentions:.2f}")
+                            
+                            # Count distribution of number of mentions
+                            mention_counts = Counter()
+                            for line in open(manifest_log_file, 'r'):
+                                try:
+                                    data = json.loads(line.strip())
+                                    if data.get('has_company_mentions', False):
+                                        count = data.get('company_mention_count', 0)
+                                        mention_counts[count] += 1
+                                except json.JSONDecodeError:
+                                    continue
+                            
+                            # Display distribution of mentions per conversation
+                            if mention_counts:
+                                logging.info("\n----- Company Mentions Distribution -----")
+                                for count in sorted(mention_counts.keys()):
+                                    frequency = mention_counts[count]
+                                    pct = (frequency / company_metrics['total_conversations_with_companies']) * 100 if company_metrics['total_conversations_with_companies'] > 0 else 0
+                                    bar = "█" * int(pct / 5)  # Visual bar (each █ = 5%)
+                                    logging.info(f"{count} mentions: {frequency} conversations ({pct:.1f}%) {bar}")
+                        
+                        # Display top mentioned companies
+                        top_companies = company_metrics['company_mention_counts'].most_common(10)
+                        if top_companies:
+                            logging.info("\n----- Top 10 Company Mentions -----")
+                            max_count = top_companies[0][1] if top_companies else 0
+                            for company, count in top_companies:
+                                percentage = (count / company_metrics['total_company_mentions']) * 100 if company_metrics['total_company_mentions'] > 0 else 0
+                                bar = "█" * int(percentage / 5)  # Visual bar (each █ = 5%)
+                                logging.info(f"{company}: {count} mentions ({percentage:.1f}%) {bar}")
+                                
+                        # Log success rate of finding companies when enabled
+                        not_found = company_metrics['company_enabled_count'] - company_metrics['total_conversations_with_companies']
+                        if not_found > 0:
+                            not_found_pct = (not_found / company_metrics['company_enabled_count']) * 100
+                            logging.warning(f"\nTarget companies not found in {not_found} conversations ({not_found_pct:.1f}% miss rate)")
+                            if not_found_pct > 20:  # Only show warning if miss rate is high
+                                logging.warning(f"High miss rate may indicate prompt engineering issues or LLM compliance problems")
+            except Exception as e:
+                logging.warning(f"Error processing company metrics: {e}")
+                
         # Log summary of temporal distribution
         if hasattr(self, 'all_timestamps') and self.all_timestamps:
             # Group by date
