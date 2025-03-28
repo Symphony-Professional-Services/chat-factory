@@ -7,6 +7,7 @@ import logging
 import random
 from typing import List, Dict, Any, Tuple
 from pathlib import Path
+#import aiofiles
 
 from ...models.taxonomy import Taxonomy, TaxonomyTopic
 from ..base import TaxonomyStrategy
@@ -66,6 +67,37 @@ class FinancialAdvisoryTaxonomyStrategy(TaxonomyStrategy):
             logging.error(f"Error loading taxonomy file {taxonomy_file}: {e}")
             return Taxonomy(name="error")
     
+
+    # async def load_taxonomy_async(self, taxonomy_file: str) -> Taxonomy:
+    #     logging.info(f"Loading financial advisory taxonomy asynchronously from: {taxonomy_file}")
+    #     try:
+    #         async with aiofiles.open(taxonomy_file, mode='r') as f:
+    #             content = await f.read()
+    #         raw_taxonomy = json.loads(content) # Use loads with the string content
+
+    #         # Validate the taxonomy structure
+    #         if not raw_taxonomy:
+    #             logging.error(f"Empty taxonomy loaded from {taxonomy_file}")
+    #             return Taxonomy(name="empty")
+            
+    #         taxonomy = Taxonomy(
+    #             name="financial_advisory",
+    #             raw_data=raw_taxonomy
+    #         )
+
+    #         taxonomy.topics = self._extract_topics(raw_taxonomy) # This remains sync
+            
+    #         logging.info(f"Successfully loaded financial advisory taxonomy with {len(taxonomy.topics)} topics")
+    #         return taxonomy
+        
+    #     except (json.JSONDecodeError, FileNotFoundError) as e:
+    #         logging.error(f"Error loading taxonomy file {taxonomy_file}: {e}")
+    #         return Taxonomy(name="error")
+        
+    #     except Exception as e: # Catch other potential errors
+    #         logging.error(f"Unexpected error loading taxonomy {taxonomy_file}: {e}", exc_info=True)
+    #         return Taxonomy(name="error")
+
     def _extract_topics(self, raw_taxonomy: Dict[str, Any]) -> List[TaxonomyTopic]:
         """
         Extract structured topics from raw taxonomy data.

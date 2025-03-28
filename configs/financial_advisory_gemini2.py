@@ -3,7 +3,7 @@ Configuration for financial advisory use case using Gemini 2.0.
 """
 
 # Google Cloud Configuration
-PROJECT_ID = "sk-ml-inference"
+PROJECT_ID = "sym-professional-services"
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"  # Using Gemini 2.0 model
 API_VERSION = "v1"  # API version for GenAI SDK
@@ -188,14 +188,14 @@ MESSAGE_LENGTH_RATIO = {
 # Output and Manifest Configuration
 CONVERSATION_MANIFEST_DIR = "conversation_scripts"
 OUTPUT_DIR = "synthetic_data"
-JSON_VERSION = "5"
+JSON_VERSION = "7"
 
 # Generation Volume Configuration
-NUM_CONVERSATIONS = 20  # Increased to generate more diverse data
+NUM_CONVERSATIONS = 100  # Increased to generate more diverse data NOTE: INCREASE COMPANY LIST, NEED TO VALIDATE DISTRIBUTION OF CONVERSATIONS AT SCALE. ADD COST LOGGING TO SCRIPT
 MIN_MESSAGES = 10     # Increased minimum message count for deeper conversations with multiple topics
 MAX_MESSAGES = 18     # Increased maximum message count to allow for more detailed exchanges and multiple subtopics
 
-# Daily average conversations (alternative to NUM_CONVERSATIONS) 
+# Daily average conversations (alternative to NUM_CONVERSATIONS)
 # DAILY_CONVERSATION_TARGET = 5  # Average conversations per day
 # ENFORCE_EXACT_COUNT = False    # Whether to strictly follow NUM_CONVERSATIONS
 
@@ -207,8 +207,8 @@ DATETIME_DISTRIBUTION_ENABLED = True
 DATETIME_STRATEGY = "business_hours"  # Options: business_hours, uniform, custom_period
 
 # Time period for conversations (ISO format)
-START_DATE = "2024-10-01T00:00:00"
-END_DATE = "2025-03-23T23:59:59"  # Q1 2024
+START_DATE = "2024-09-20T00:00:00"
+END_DATE = "2025-03-27T23:59:59"  # Q1 2024
 
 # Business hours settings
 BUSINESS_HOURS_START = 9  # 9 AM
@@ -237,3 +237,5 @@ MESSAGE_DELAY_STD_DEV = 30  # Standard deviation for delay
 
 # Logging Configuration
 LOG_FILE = "synthetic_chat_generator.log"
+MAX_CONCURRENT_REQUESTS = 100
+SAVE_BUFFER_THRESHOLD = 500
