@@ -1,0 +1,21 @@
+tests_enabled:
+  completeness: true
+  schema: true
+  temporal: true
+  distributions: true
+  company_mentions: true
+  conversation_stats: true
+  deduplication: true # Set to false if you want to skip this slow test
+
+# --- Thresholds & Parameters ---
+# Override defaults only where needed
+completeness_tolerance_percent: 0.5 # Stricter tolerance
+min_company_mention_success_rate: 0.75 # Require 75% success
+dedup_similarity_threshold: 0.97 # Higher threshold for duplicates
+min_topic_coverage_percent: 95.0 # Ensure most topics are hit
+# Add total_topics_in_taxonomy if known and different from generator config default
+# total_topics_in_taxonomy: 150
+
+# --- Optional: Point to the generator config if needed ---
+# generator_config_path: '/path/to/your/generator/config.py'
+# taxonomy_path: '/path/to/your/taxonomy.json' # Or let it be read from generator config

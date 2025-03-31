@@ -1254,7 +1254,8 @@ from .strategies.base import TaxonomyStrategy, GenerationStrategy, FewShotExampl
 from .strategies.base.datetime_strategy import DatetimeStrategy
 from .llm.base import LLMProvider
 from .config.base_config import BaseConfig
-from .utils import ensure_directory, sanitize_filename
+from .utils import ensure_directory, sanitize_filename, SummaryStatisticsLogger
+
 
 
 class SyntheticChatGenerator:
@@ -1645,7 +1646,7 @@ class SyntheticChatGenerator:
                 try:
                     with open(file_path, 'w') as f:
                         json.dump(conversation_file.to_dict(), f, indent=2)
-                    logging.info(f"Saved {len(conversation_file.conversations)} conversations to: {file_path}")
+                    logging.debug(f"Saved {len(conversation_file.conversations)} conversations to: {file_path}")
 
                     # Mark this buffer key for clearing *after* successful save
                     keys_to_clear.append(buffer_key)
@@ -2019,30 +2020,28 @@ class SyntheticChatGenerator:
 
     def _log_final_analytics(self):
         """Logs summary analytics at the end of the run."""
+        logging.info("="*57)
         logging.info("\n" + "="*20 + " FINAL ANALYTICS " + "="*20)
 
-        # Log summary of client-advisor interactions
-        if hasattr(self, 'advisor_client_interactions') and self.advisor_client_interactions:
-            # ... (Keep your existing detailed logging logic for interactions) ...
-            logging.info("\n===== ADVISOR-CLIENT INTERACTION SUMMARY =====")
-            # Add summary stats here if not already present
-            total_pairs = len(self.advisor_client_interactions)
-            total_interactions = sum(self.advisor_client_interactions.values())
-            logging.info(f"Total unique advisor-client pairs with conversations: {total_pairs}")
-            logging.info(f"Total conversation interactions logged: {total_interactions}")
-            # (Include the rest of your histograms and heatmaps logic)
+        # Instantiate SummaryStatisticsLogger with the necessary data
+        final_stats = SummaryStatisticsLogger(
+            config=self.config,
+            run_id=self.run_id,
+            advisor_client_interactions=self.advisor_client_interactions,
+            all_timestamps=self.all_timestamps,
+            manifest_logger=self.manifest_logger,
+            client_advisor_map=self.client_advisor_map,
+            generation_strategy=self.generation_strategy # Add this line if you have it
+        )
 
-        # Log company mention metrics
-        # --- Re-implement metrics calculation based on logged manifest ---
-        if hasattr(self, 'manifest_logger') and self.manifest_logger:
-             self._calculate_and_log_company_metrics()
+        # Call the methods to log the different types of statistics
+        final_stats.log_advisor_client_distribution()
 
+        if self.manifest_logger:
+            final_stats.log_company_metrics()
 
-        # Log summary of temporal distribution
-        if hasattr(self, 'all_timestamps') and self.all_timestamps:
-            # ... (Keep your existing detailed logging logic for temporal distribution) ...
-            logging.info("\n===== TEMPORAL DISTRIBUTION SUMMARY =====")
-            # (Include the rest of your histograms and distribution logic)
+        if self.all_timestamps:
+            final_stats.log_temporal_distribution()
 
         logging.info("="*57)
 

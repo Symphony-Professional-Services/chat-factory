@@ -191,9 +191,9 @@ OUTPUT_DIR = "synthetic_data"
 JSON_VERSION = "7"
 
 # Generation Volume Configuration
-NUM_CONVERSATIONS = 100  # Increased to generate more diverse data NOTE: INCREASE COMPANY LIST, NEED TO VALIDATE DISTRIBUTION OF CONVERSATIONS AT SCALE. ADD COST LOGGING TO SCRIPT
-MIN_MESSAGES = 10     # Increased minimum message count for deeper conversations with multiple topics
-MAX_MESSAGES = 18     # Increased maximum message count to allow for more detailed exchanges and multiple subtopics
+NUM_CONVERSATIONS = 130000  # Increased to generate more diverse data NOTE: INCREASE COMPANY LIST, NEED TO VALIDATE DISTRIBUTION OF CONVERSATIONS AT SCALE. ADD COST LOGGING TO SCRIPT
+MIN_MESSAGES = 5     # Increased minimum message count for deeper conversations with multiple topics
+MAX_MESSAGES = 16     # Increased maximum message count to allow for more detailed exchanges and multiple subtopics
 
 # Daily average conversations (alternative to NUM_CONVERSATIONS)
 # DAILY_CONVERSATION_TARGET = 5  # Average conversations per day

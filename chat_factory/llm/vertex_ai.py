@@ -550,17 +550,20 @@ class VertexAIProvider(LLMProvider):
 
         if self.use_genai_sdk:
             # Create dictionary of parameters expected directly by the API/SDK method
-            genai_generation_params_dict = {
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "top_k": self.top_k,
-                "max_output_tokens": 1200, # Set directly if accepted
-                "stop_sequences": self.stop_sequences if self.stop_sequences else None,
+            genai_generation_params_dict = GenerateContentConfig(
+                temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                #max_output_token=1200,
+                stop_sequences=self.stop_sequences if self.stop_sequences else None,
+                presence_penalty=self.presence_penalty,
+                frequency_penalty=self.frequency_penalty
                 # Add other direct parameters if needed and supported
                 # e.g., "candidate_count": 1
-            }
+            )
+
             # Filter out None values
-            genai_generation_params_dict = {k: v for k, v in genai_generation_params_dict.items() if v is not None}
+            #genai_generation_params_dict = {k: v for k, v in genai_generation_params_dict.items() if v is not None}
             logger.debug(f"GenAI SDK parameter dictionary: {genai_generation_params_dict}")
         else:
             # Vertex AI SDK uses the typed GenerationConfig object
@@ -585,11 +588,7 @@ class VertexAIProvider(LLMProvider):
                     response_object = await self.genai_client.aio.models.generate_content(
                         model=f'{self.model_name}', # Ensure 'models/' prefix if needed
                         contents=[prompt],
-                        config=GenerateContentConfig(
-                            temperature=self.temperature, top_p=self.top_p, top_k=self.top_k)
-                        # Unpack the dictionary into direct keyword arguments
-                        #**genai_generation_params_dict
-                        # DO NOT pass config= or generation_config=
+                        config=genai_generation_params_dict
                     )
                     # --- *** END CORRECTED CALL *** ---
 
