@@ -68,35 +68,6 @@ class FinancialAdvisoryTaxonomyStrategy(TaxonomyStrategy):
             return Taxonomy(name="error")
     
 
-    # async def load_taxonomy_async(self, taxonomy_file: str) -> Taxonomy:
-    #     logging.info(f"Loading financial advisory taxonomy asynchronously from: {taxonomy_file}")
-    #     try:
-    #         async with aiofiles.open(taxonomy_file, mode='r') as f:
-    #             content = await f.read()
-    #         raw_taxonomy = json.loads(content) # Use loads with the string content
-
-    #         # Validate the taxonomy structure
-    #         if not raw_taxonomy:
-    #             logging.error(f"Empty taxonomy loaded from {taxonomy_file}")
-    #             return Taxonomy(name="empty")
-            
-    #         taxonomy = Taxonomy(
-    #             name="financial_advisory",
-    #             raw_data=raw_taxonomy
-    #         )
-
-    #         taxonomy.topics = self._extract_topics(raw_taxonomy) # This remains sync
-            
-    #         logging.info(f"Successfully loaded financial advisory taxonomy with {len(taxonomy.topics)} topics")
-    #         return taxonomy
-        
-    #     except (json.JSONDecodeError, FileNotFoundError) as e:
-    #         logging.error(f"Error loading taxonomy file {taxonomy_file}: {e}")
-    #         return Taxonomy(name="error")
-        
-    #     except Exception as e: # Catch other potential errors
-    #         logging.error(f"Unexpected error loading taxonomy {taxonomy_file}: {e}", exc_info=True)
-    #         return Taxonomy(name="error")
 
     def _extract_topics(self, raw_taxonomy: Dict[str, Any]) -> List[TaxonomyTopic]:
         """
@@ -169,25 +140,100 @@ class FinancialAdvisoryTaxonomyStrategy(TaxonomyStrategy):
         logging.info(f"Flattened financial advisory taxonomy into {len(flattened)} unique topic paths")
         return flattened
     
+    # def select_topic(self, flattened_taxonomy: List[Tuple[str, str, str]]) -> Tuple[str, str, str]:
+    #     """
+    #     Select a topic from the flattened taxonomy.
+        
+    #     Args:
+    #         flattened_taxonomy: List of flattened taxonomy tuples
+            
+    #     Returns:
+    #         Selected topic as (category, topic, subtopic)
+    #     """
+    #     if not flattened_taxonomy:
+    #         logging.warning("No flattened topics available. Using default topic.")
+    #         return ("General", "General Conversation", "")
+        
+    #     # For now, simple uniform distribution
+    #     # TODO: Implement weighted distributions based on topic_distribution setting
+    #     category, topic, subtopic = random.choice(flattened_taxonomy)
+        
+    #     logging.info(f"Selected topic: category='{category}', topic='{topic}', subtopic='{subtopic}'")
+    #     return (category, topic, subtopic)
+
+
     def select_topic(self, flattened_taxonomy: List[Tuple[str, str, str]]) -> Tuple[str, str, str]:
         """
-        Select a topic from the flattened taxonomy.
-        
+        Select a topic from the flattened taxonomy based on the configured distribution.
+
         Args:
             flattened_taxonomy: List of flattened taxonomy tuples
-            
+
         Returns:
             Selected topic as (category, topic, subtopic)
         """
         if not flattened_taxonomy:
             logging.warning("No flattened topics available. Using default topic.")
             return ("General", "General Conversation", "")
-        
-        # For now, simple uniform distribution
-        # TODO: Implement weighted distributions based on topic_distribution setting
+
+        if self.topic_distribution == "uniform":
+            return self._select_topic_uniform(flattened_taxonomy)
+        elif self.topic_distribution == "normal":
+            return self._select_topic_normal(flattened_taxonomy)
+        elif self.topic_distribution == "custom":
+            return self._select_topic_custom(flattened_taxonomy)
+        else:
+            logging.warning(f"Unknown topic distribution: {self.topic_distribution}. Using uniform distribution.")
+            return self._select_topic_uniform(flattened_taxonomy)
+
+    def _select_topic_uniform(self, flattened_taxonomy: List[Tuple[str, str, str]]) -> Tuple[str, str, str]:
+        """Select a topic using uniform distribution."""
         category, topic, subtopic = random.choice(flattened_taxonomy)
-        
-        logging.info(f"Selected topic: category='{category}', topic='{topic}', subtopic='{subtopic}'")
+        logging.info(f"Selected topic (uniform): category='{category}', topic='{topic}', subtopic='{subtopic}'")
+        return (category, topic, subtopic)
+
+    def _select_topic_normal(self, flattened_taxonomy: List[Tuple[str, str, str]]) -> Tuple[str, str, str]:
+        """Select a topic using a normal distribution."""
+        num_topics = len(flattened_taxonomy)
+        if num_topics == 1:
+            return flattened_taxonomy[0]
+
+        # Generate a normal distribution centered around the middle index
+        mu = (num_topics - 1) / 2  # Center of the distribution
+        sigma = num_topics / 6  # Standard deviation (approx. 3 sigma covers most of the range)
+        index = int(round(np.random.normal(mu, sigma)))
+
+        # Ensure the index is within bounds
+        index = max(0, min(index, num_topics - 1))
+
+        category, topic, subtopic = flattened_taxonomy[index]
+        logging.info(f"Selected topic (normal): category='{category}', topic='{topic}', subtopic='{subtopic}'")
+        return (category, topic, subtopic)
+
+    def _select_topic_custom(self, flattened_taxonomy: List[Tuple[str, str, str]]) -> Tuple[str, str, str]:
+        """Select a topic using custom weights."""
+        # Build a list of topics and their corresponding weights
+        weighted_topics = []
+        for category, topic, subtopic in flattened_taxonomy:
+            topic_key = f"{category}/{topic}/{subtopic}" if subtopic else f"{category}/{topic}"
+            weight = self.topic_weights.get(topic_key, 1.0)  # Default weight is 1.0
+            weighted_topics.append(((category, topic, subtopic), weight))
+
+        # Separate topics and weights
+        topics, weights = zip(*weighted_topics)
+
+        # Normalize weights to ensure they sum to 1
+        total_weight = sum(weights)
+        if total_weight > 0:
+            normalized_weights = [w / total_weight for w in weights]
+        else:
+            logging.warning("All custom topic weights are zero. Using uniform distribution.")
+            return self._select_topic_uniform(flattened_taxonomy)
+
+        # Select a topic based on the normalized weights
+        selected_topic = random.choices(topics, weights=normalized_weights, k=1)[0]
+        category, topic, subtopic = selected_topic
+        logging.info(f"Selected topic (custom): category='{category}', topic='{topic}', subtopic='{subtopic}'")
         return (category, topic, subtopic)
     
     def detect_taxonomy_format(self, taxonomy: Dict[str, Any]) -> str:

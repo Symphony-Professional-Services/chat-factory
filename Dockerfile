@@ -91,8 +91,6 @@ else\n\
     fi\n\
 fi' > /app/docker-entrypoint.sh
 
-# Make the entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Set the command to run when the container starts
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
