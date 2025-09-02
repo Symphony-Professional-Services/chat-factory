@@ -110,11 +110,8 @@ poetry install
 There are several scripts to run the different use cases:
 
 ```bash
-# Run the financial advisory generator with Gemini 1.5
-./run_financial_advisory.py --num 10
-
-# Run the financial advisory generator with Gemini 2.0
-./run_financial_advisory_gemini2.py --run_id "gemini2_test" --num 10
+# Run the financial advisory generator
+./run_financial_advisory.py --run_id "test_run" --num 10
 
 # Run the company tagging generator
 ./run_company_tagging.py --num 10

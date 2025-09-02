@@ -7,7 +7,7 @@
 # and then the analytics script (metrics.py). It logs all outputs and errors 
 # to a log file and ensures that output logs are written to a mapped directory.
 # Set run_*.py to run
-RUN_FILE="run_financial_advisory_gemini2.py"
+RUN_FILE="run_financial_advisory.py"
 
 # Set the log file path
 LOG_FILE="run_and_log.log"
