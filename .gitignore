@@ -9,3 +9,5 @@ google-service-account.json
 * copy.py
 service-account-key.json
 *_cleanup.md
+*_log.txt
+*.txt
