@@ -21,10 +21,10 @@ TEMPERATURE = 0.4  # Slightly higher temperature for more creative variations
 TOP_P = 0.95
 
 # Use enhanced taxonomy with additional conversation types
-TAXONOMY_FILE = "taxonomies/company_tagging_gemini2.json"
+TAXONOMY_FILE = "taxonomies/company_tagging.json"
 
 # Use expanded company data file with more companies and variations
-COMPANY_DATA_FILE = "company_data_gemini2.csv"
+COMPANY_DATA_FILE = "company_data.csv"
 # TODO : CLEAN UP THIS CHUNK (REDUNDANT)
 # Update conversation types to include new types in the enhanced taxonomy
 CONVERSATION_TYPES = [
@@ -69,4 +69,4 @@ FEW_SHOT_EXAMPLES_FILES = {
 }
 
 # Logging
-LOG_FILE = "company_tagging_gemini2_generator.log"
+LOG_FILE = "company_tagging_generator.log"

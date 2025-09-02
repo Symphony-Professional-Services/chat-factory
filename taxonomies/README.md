@@ -10,7 +10,7 @@ The taxonomies are JSON files that define the structure and topics for the gener
 
 *   **`financial_advisory.json`**: This taxonomy is designed for generating conversations between financial advisors and their clients. It includes a wide range of topics, from small talk and market commentary to detailed financial planning.
 
-*   **`company_tagging_gemini2.json`**: This taxonomy is focused on generating conversations that involve specific companies. It is used for training and evaluating named entity recognition (NER) models. In addition to conversation topics, it includes a `conversation_types` section that provides detailed settings for how companies should be mentioned in the conversation.
+*   **`company_tagging.json`**: This taxonomy is focused on generating conversations that involve specific companies. It is used for training and evaluating named entity recognition (NER) models. In addition to conversation topics, it includes a `conversation_types` section that provides detailed settings for how companies should be mentioned in the conversation.
 
 ## How Taxonomies Fit into the Code Generation
 
@@ -62,7 +62,7 @@ This is a simple key-value structure where the keys are the main categories and 
 }
 ```
 
-**Advanced Taxonomy (like `company_tagging_gemini2.json`):**
+**Advanced Taxonomy (like `company_tagging.json`):**
 
 This format includes a `conversation_types` section that provides more detailed control over the generation process.
 

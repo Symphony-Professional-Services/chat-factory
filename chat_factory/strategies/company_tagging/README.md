@@ -8,7 +8,7 @@ The primary goal of the company tagging strategies is to ensure that the generat
 
 ## `CompanyTaggingTaxonomyStrategy`
 
-*   **Purpose:** This strategy is responsible for handling the `company_tagging_gemini2.json` taxonomy file.
+*   **Purpose:** This strategy is responsible for handling the `company_tagging.json` taxonomy file.
 *   **Key Responsibilities:**
     *   **Loading the Taxonomy:** It loads the taxonomy file, which includes not only conversation topics but also a `conversation_types` section with detailed settings for company tagging.
     *   **Parsing Conversation Types:** It parses the `conversation_types` section to understand the specific requirements for each type of conversation, such as the probability of including company mentions and the number of companies to include.
@@ -24,7 +24,7 @@ The primary goal of the company tagging strategies is to ensure that the generat
 
 ## How it Works
 
-1.  The `CompanyTaggingTaxonomyStrategy` loads the `company_tagging_gemini2.json` taxonomy and selects a topic.
+1.  The `CompanyTaggingTaxonomyStrategy` loads the `company_tagging.json` taxonomy and selects a topic.
 2.  The `CompanyTaggingGenerationStrategy` creates a manifest blueprint for the conversation, which includes a list of companies to be mentioned.
 3.  The `CompanyTaggingGenerationStrategy` then constructs a prompt that includes the selected topic and the list of companies, along with detailed instructions on how to include them in the conversation.
 4.  The LLM generates a conversation based on the prompt.
