@@ -9,7 +9,7 @@ This document describes the different use cases available in the chat-factory pr
 Generates conversations between financial advisors and their clients.
 
 **Configuration:**
-- Config File: `configs/financial_advisory_gemini2.py`
+- Config File: `configs/financial_advisory.py`
 - Run Script: `run_financial_advisory.py`
 - Taxonomy File: `taxonomies/financial_advisory.json`
 
@@ -27,9 +27,9 @@ docker run --rm -e USE_CASE=financial_advisory -e USE_MOCK_PROVIDER=false \
 Generates conversations that include specific company mentions.
 
 **Configuration:**
-- Config File: `configs/company_tagging_gemini2.py`
+- Config File: `configs/company_tagging.py`
 - Run Script: `run_company_tagging.py`
-- Taxonomy File: `taxonomies/company_tagging_gemini2.json`
+- Taxonomy File: `taxonomies/company_tagging.json`
 - Company Data: `company_data_gemini2.csv`
 
 **Docker Usage:**
