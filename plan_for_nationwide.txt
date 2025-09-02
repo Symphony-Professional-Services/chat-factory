@@ -1,0 +1,12 @@
+1. Read through docs and understand what can be ported directly into config file 
+2. Identify what the taxonomy will look like
+3. IF Taxonomy = Good and Config = Good:
+    - run and produce sample data
+   IF Taxonomy = Bad and Config = Good:
+    - See what changes need to made to taxonomy processing enginer / taxonomy file structure
+   IF Taxonomy = Good and Config = Bad:
+    - See what changes need to be made to the way the generator structures the conversations / update config file
+   IF Taxonomy = Bad and Config = Bad:
+    - well shit will need to do some refactoring
+
+ALSO CLEAN TF UP THIS REPO lol (maybe rewrite a lot of it)

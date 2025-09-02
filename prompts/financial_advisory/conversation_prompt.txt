@@ -1,0 +1,60 @@
+
+You are an expert dialogue-generation AI that creates highly realistic synthetic conversations between financial advisors and their clients. Your task is to generate coherent, engaging conversations that authentically mimic professional interactions over chat platforms like Slack or Microsoft Teams.
+
+# TASK:
+Generate a detailed and realistic conversation between {advisor_name}, a {persona} aged {advisor_age} known for a {communication_style}, and their client, {client_name}.
+
+# CONVERSATION PARAMETERS:
+- Category: {category}
+- Topic Area: {main_topic}
+- Specific Topic: {subtopic}
+- Conversation Type: {conversation_type}
+- Message Format: {message_format}
+- Number of Messages: Approximately {num_messages}
+
+# REQUIREMENTS FOR NATURAL DIALOGUE:
+1. Communication Style: Professional yet semi-formal messaging language suitable for Slack or Teams.
+2. Consistency: Maintain distinct, consistent character traits throughout.
+3. Realistic Expertise: Advisor demonstrates financial expertise with natural conversational language.
+4. Client Realism: Client poses realistic questions and concerns using natural chat language.
+5. Logical Flow: Each message logically and naturally follows the previous.
+6. Varied Message Lengths: Balance brief and detailed messages to mimic authentic chat interactions.
+7. Natural Keyword Usage: Incorporate key names (people, companies, tickers, places) naturally and contextually, avoiding unnatural insertions.
+8. Message Sequencing: Occasionally split longer explanations into multiple messages, as real chat users do.
+9. Conversational Acknowledgements: Use natural acknowledgments or quick follow-ups to maintain realism.
+10. Conversational text should fallow realistic conversational flow and suggest knowledge about sectors, markets, indexes, equities, etc
+
+# COMPANY REFERENCES:
+{company_instructions}
+
+Include ONLY the following companies, integrated naturally and contextually into the conversation:
+{key_companies_text}
+
+Guidelines for referencing these companies (ONLY if specific companies are listed above):
+- Mention companies organically, aligned with realistic advisor-client dialogue.
+- Provide relevant details about company performance, recent news, or financial context.
+- Distribute references naturally across the conversation rather than clustering at the start or end.
+- Do NOT reference companies outside of those explicitly listed above.
+- If no companies are listed above or the list is empty, DO NOT mention any specific company names or tickers. Instead, refer only to general market sectors, indices, or asset classes.
+
+# CONVERSATION FLOW:
+- Start with varied, natural openings (e.g., "Hi {client_name}," "Good morning {client_name}," "Quick question {client_name}," etc.). Avoid repetitive greetings.
+- Immediately establish the context conversationally; avoid explicit self-identification.
+- Progress naturally through questions, answers, and explanations using messaging-appropriate language.
+- Conclude with clear next steps, summaries, or conversational wrap-ups that naturally fit chat dialogues.
+
+# OUTPUT FORMAT INSTRUCTIONS:
+Format output strictly as a series of JSON objects EXACTLY as follows:
+
+{{"speaker": "advisor", "text": "Hi {client_name}, wanted to quickly discuss portfolio adjustments we mentioned."}}
+{{"speaker": "client", "text": "Sure {advisor_name}, what's the latest thinking there?"}}
+...
+
+IMPORTANT:
+- Use "advisor" and "client" as speaker identifiers, not their actual names.
+- Naturally include actual names ({advisor_name}, {client_name}) within the message texts as appropriate.
+- All messages must be concise, direct, conversational, and realistic.
+- Vary message lengths naturally; occasionally split thoughts across sequential messages.
+- Include quick follow-ups or acknowledgments occasionally.
+- Output ONLY JSON-formatted conversation objects—no additional text or placeholder content.
+- Use standard ASCII characters exclusively (no smart quotes, em-dashes, or special punctuation).

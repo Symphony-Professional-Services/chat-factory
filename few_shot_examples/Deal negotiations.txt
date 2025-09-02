@@ -1,0 +1,33 @@
+<BEGIN CONVERSATION>
+[
+    {
+        "speaker": "0",
+        "text": "Hi, we need to discuss the current deal with GOOGL; I believe the valuation is off."
+    },
+    {
+        "speaker": "1",
+        "text": "I agree. The terms regarding GOOGL's performance require a closer look."
+    },
+    {
+        "speaker": "0",
+        "text": "Let's rework the agreement to better reflect the current market conditions for GOOGL."
+    }
+]
+<END CONVERSATION>
+
+<BEGIN CONVERSATION>
+[
+    {
+        "speaker": "0",
+        "text": "We should revisit our deal terms for the ongoing negotiations with AMZN."
+    },
+    {
+        "speaker": "1",
+        "text": "Absolutely, the due diligence on AMZN has revealed some roadblocks that need addressing."
+    },
+    {
+        "speaker": "0",
+        "text": "Let's iterate on the contract details and ensure AMZN's valuation is fairly represented."
+    }
+]
+<END CONVERSATION>

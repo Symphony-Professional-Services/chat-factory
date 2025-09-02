@@ -1,0 +1,372 @@
+2025-03-31 00:55:38,726 - root - INFO - Run financial_advisory_3_30_25_130k completed.
+2025-03-31 00:55:38,726 - root - INFO - Target conversations: 130000
+2025-03-31 00:55:38,726 - root - INFO - Successfully generated: 129998
+2025-03-31 00:55:38,726 - root - INFO - Failed generations: 2
+2025-03-31 00:55:38,726 - root - INFO - Total duration: 6801.78 seconds
+2025-03-31 00:55:38,726 - root - INFO - Average time per conversation: 0.052 seconds
+2025-03-31 00:55:38,726 - root - INFO - Conversations per second: 19.11
+2025-03-31 00:55:38,726 - root - INFO - =========================================================
+2025-03-31 00:55:38,726 - root - INFO - 
+==================== FINAL ANALYTICS ====================
+2025-03-31 00:55:38,727 - root - INFO - 
+===== CLIENT-ADVISOR DISTRIBUTION =====
+2025-03-31 00:55:38,727 - root - INFO - Total unique client-advisor pairings: 421
+2025-03-31 00:55:38,727 - root - INFO - Average clients per advisor: 21.05
+2025-03-31 00:55:38,728 - root - INFO - Range: 1 to 63 clients per advisor
+2025-03-31 00:55:38,728 - root - INFO - 
+----- Clients per Advisor -----
+2025-03-31 00:55:38,728 - root - INFO - Eve Davis: 63 clients (18.8%) ███
+2025-03-31 00:55:38,728 - root - INFO - Nancy Chen: 55 clients (16.4%) ███
+2025-03-31 00:55:38,728 - root - INFO - Quincy Thompson: 55 clients (16.4%) ███
+2025-03-31 00:55:38,729 - root - INFO - Tina Washington: 55 clients (16.4%) ███
+2025-03-31 00:55:38,729 - root - INFO - Bob Smith: 35 clients (10.4%) ██
+2025-03-31 00:55:38,729 - root - INFO - Alice Johnson: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Carol Williams: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - David Brown: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Frank Miller: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Grace Wilson: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Hank Moore: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Ivy Taylor: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Jack Anderson: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Michael Roberts: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Oliver Patel: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Rachel Garcia: 12 clients (3.6%) 
+2025-03-31 00:55:38,729 - root - INFO - Samuel Kim: 12 clients (3.6%) 
+2025-03-31 00:55:38,730 - root - INFO - Victor Martinez: 12 clients (3.6%) 
+2025-03-31 00:55:38,730 - root - INFO - Karen Lee: 1 clients (0.3%) 
+2025-03-31 00:55:38,730 - root - INFO - Patricia Foster: 1 clients (0.3%) 
+2025-03-31 00:55:38,731 - root - INFO - 
+===== ADVISOR-CLIENT INTERACTION SUMMARY =====
+2025-03-31 00:55:38,731 - root - INFO - Total unique advisor-client pairs with conversations: 421
+2025-03-31 00:55:38,731 - root - INFO - 
+----- Advisor Activity (by conversation count) -----
+2025-03-31 00:55:38,731 - root - INFO - Oliver Patel: 6672 conversations (5.1%), 12 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Nancy Chen: 6633 conversations (5.1%), 55 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Eve Davis: 6606 conversations (5.1%), 63 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Samuel Kim: 6583 conversations (5.1%), 12 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Alice Johnson: 6580 conversations (5.1%), 12 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Grace Wilson: 6571 conversations (5.1%), 12 unique clients █
+2025-03-31 00:55:38,731 - root - INFO - Victor Martinez: 6543 conversations (5.0%), 12 unique clients █
+2025-03-31 00:55:38,732 - root - INFO - Hank Moore: 6540 conversations (5.0%), 12 unique clients █
+2025-03-31 00:55:38,732 - root - INFO - Jack Anderson: 6527 conversations (5.0%), 12 unique clients █
+2025-03-31 00:55:38,732 - root - INFO - Ivy Taylor: 6514 conversations (5.0%), 12 unique clients █
+2025-03-31 00:55:38,732 - root - INFO - Michael Roberts: 6503 conversations (5.0%), 12 unique clients █
+2025-03-31 00:55:38,732 - root - INFO - Patricia Foster: 6499 conversations (5.0%), 1 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - David Brown: 6455 conversations (5.0%), 12 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Karen Lee: 6447 conversations (5.0%), 1 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Quincy Thompson: 6443 conversations (5.0%), 55 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Tina Washington: 6441 conversations (5.0%), 55 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Frank Miller: 6439 conversations (5.0%), 12 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Rachel Garcia: 6432 conversations (4.9%), 12 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Bob Smith: 6377 conversations (4.9%), 35 unique clients 
+2025-03-31 00:55:38,732 - root - INFO - Carol Williams: 6193 conversations (4.8%), 12 unique clients 
+2025-03-31 00:55:38,733 - root - INFO - 
+----- Client Distribution (by advisor count) -----
+2025-03-31 00:55:38,733 - root - INFO - Clients with 1 advisors: 117 clients (48.1%) █████████
+2025-03-31 00:55:38,733 - root - INFO - Clients with 2 advisors: 89 clients (36.6%) ███████
+2025-03-31 00:55:38,733 - root - INFO - Clients with 3 advisors: 24 clients (9.9%) █
+2025-03-31 00:55:38,734 - root - INFO - Clients with 4 advisors: 11 clients (4.5%) 
+2025-03-31 00:55:38,734 - root - INFO - Clients with 5 advisors: 2 clients (0.8%) 
+2025-03-31 00:55:38,734 - root - INFO - 
+----- Distribution of Advisors by Client Count -----
+2025-03-31 00:55:38,734 - root - INFO - Advisors with 1 clients: 2 advisors (10.0%) ██
+2025-03-31 00:55:38,734 - root - INFO - Advisors with 12 clients: 13 advisors (65.0%) █████████████
+2025-03-31 00:55:38,734 - root - INFO - Advisors with 35 clients: 1 advisors (5.0%) █
+2025-03-31 00:55:38,734 - root - INFO - Advisors with 55 clients: 3 advisors (15.0%) ███
+2025-03-31 00:55:38,734 - root - INFO - Advisors with 63 clients: 1 advisors (5.0%) █
+2025-03-31 00:55:38,735 - root - INFO - 
+----- Conversation Density Heat Map -----
+2025-03-31 00:55:38,735 - root - INFO - Advisor/Client       | Elizabeth Ward  | Madeline Brooks | Paige Roberts   | Deanna Cook     | Kyle Griffin    | Duane Campbell  | Tyler Bennett   | Erik Alexander  | Marie Stewart  
+2025-03-31 00:55:38,735 - root - INFO - ---------------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+----------------
+2025-03-31 00:55:38,735 - root - INFO - Oliver Patel         | 560             | 544             | 534             | 560             | 549             |                 |                 |                 |                 | 
+2025-03-31 00:55:38,735 - root - INFO - Nancy Chen           |                 |                 |                 |                 |                 | 128             |                 | 115             |                 | 
+2025-03-31 00:55:38,736 - root - INFO - Eve Davis            | 92              |                 | 101             |                 | 81              |                 | 109             |                 |                 | 
+2025-03-31 00:55:38,736 - root - INFO - Samuel Kim           |                 |                 |                 |                 |                 |                 |                 | 600             |                 | 
+2025-03-31 00:55:38,736 - root - INFO - Alice Johnson        |                 |                 |                 |                 |                 |                 |                 |                 | 587             | 
+2025-03-31 00:55:38,736 - root - INFO - 
+----- Top Advisor-Client Pairs -----
+2025-03-31 00:55:38,737 - root - INFO - 1. Patricia Foster - Brent Butler: 6499 conversations (5.0%) 
+2025-03-31 00:55:38,737 - root - INFO - 2. Karen Lee - Benjamin Turner: 6447 conversations (5.0%) 
+2025-03-31 00:55:38,738 - root - INFO - 3. Samuel Kim - Erik Alexander: 600 conversations (0.5%) 
+2025-03-31 00:55:38,738 - root - INFO - 4. Grace Wilson - John Richardson: 600 conversations (0.5%) 
+2025-03-31 00:55:38,738 - root - INFO - 5. Rachel Garcia - Shelby Alexander: 592 conversations (0.5%) 
+2025-03-31 00:55:38,738 - root - INFO - 6. Victor Martinez - Hannah Reynolds: 591 conversations (0.5%) 
+2025-03-31 00:55:38,738 - root - INFO - 7. Michael Roberts - Darren Coleman: 590 conversations (0.5%) 
+2025-03-31 00:55:38,738 - root - INFO - 8. Alice Johnson - Marie Stewart: 587 conversations (0.5%) 
+2025-03-31 00:55:38,739 - root - INFO - 9. Oliver Patel - Sabrina Parker: 584 conversations (0.4%) 
+2025-03-31 00:55:38,739 - root - INFO - 10. Oliver Patel - Todd Gonzalez: 584 conversations (0.4%) 
+2025-03-31 00:55:38,766 - root - INFO - 
+Detailed advisor-client interaction data written to: synthetic_data/advisor_client_interactions_financial_advisory_3_30_25_130k.txt
+2025-03-31 00:55:39,820 - root - INFO - 
+===== COMPANY TARGETING METRICS =====
+2025-03-31 00:55:39,820 - root - INFO - Company targeting configuration: probability=0.30, min_companies=1, max_companies=3
+2025-03-31 00:55:39,821 - root - INFO - Conversations with company targeting enabled: 39002 (30.0% of all conversations)
+2025-03-31 00:55:39,821 - root - INFO - Expected conversations with company targeting: 39000 (30.0% of all conversations)
+2025-03-31 00:55:39,821 - root - INFO - Conversations with at least one company mentioned: 39002 (100.0% success rate, 30.0% of all conversations)
+2025-03-31 00:55:39,821 - root - INFO - 
+----- Company Count Distribution -----
+2025-03-31 00:55:39,821 - root - INFO - 1_company: 26787 conversations (68.7%) █████████████
+2025-03-31 00:55:39,821 - root - INFO - 2_companies: 7776 conversations (19.9%) ███
+2025-03-31 00:55:39,821 - root - INFO - 3+_companies: 4439 conversations (11.4%) ██
+2025-03-31 00:55:39,821 - root - INFO - 
+Average company mentions per conversation (when present): 1.47
+2025-03-31 00:55:40,827 - root - INFO - 
+----- Company Mentions Distribution -----
+2025-03-31 00:55:40,828 - root - INFO - 0 mentions: 39002 conversations (100.0%) ████████████████████
+2025-03-31 00:55:40,828 - root - INFO - 
+----- Top 10 Company Mentions -----
+2025-03-31 00:55:40,828 - root - INFO - Dow Jones Industrial Average: 1107 mentions (1.9%) 
+2025-03-31 00:55:40,828 - root - INFO - Remitly Global, Inc.: 825 mentions (1.4%) 
+2025-03-31 00:55:40,829 - root - INFO - BlackRock Inc.: 786 mentions (1.4%) 
+2025-03-31 00:55:40,829 - root - INFO - iShares iBoxx High Yield Corporate Bond ETF: 776 mentions (1.4%) 
+2025-03-31 00:55:40,829 - root - INFO - iShares Core U.S. Aggregate Bond ETF: 756 mentions (1.3%) 
+2025-03-31 00:55:40,829 - root - INFO - SPDR S&P 500 ETF Trust: 750 mentions (1.3%) 
+2025-03-31 00:55:40,829 - root - INFO - Morgan Stanley: 749 mentions (1.3%) 
+2025-03-31 00:55:40,829 - root - INFO - iShares Russell 2000 ETF: 738 mentions (1.3%) 
+2025-03-31 00:55:40,829 - root - INFO - Vanguard Real Estate ETF: 737 mentions (1.3%) 
+2025-03-31 00:55:40,829 - root - INFO - Health Care Select Sector SPDR Fund: 736 mentions (1.3%) 
+2025-03-31 00:55:41,809 - root - INFO - 
+===== TEMPORAL DISTRIBUTION SUMMARY =====
+2025-03-31 00:55:41,809 - root - INFO - 
+----- Daily Distribution -----
+2025-03-31 00:55:41,809 - root - INFO - 2024-09-20: 1213 conversations
+2025-03-31 00:55:41,809 - root - INFO - 2024-09-21: 302 conversations
+2025-03-31 00:55:41,809 - root - INFO - 2024-09-22: 310 conversations
+2025-03-31 00:55:41,809 - root - INFO - 2024-09-23: 1232 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-24: 849 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-25: 931 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-26: 928 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-27: 862 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-28: 122 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-29: 120 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-09-30: 1000 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-01: 883 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-02: 955 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-03: 899 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-04: 881 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-05: 90 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-06: 146 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-07: 970 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-08: 932 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-09: 962 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-10: 921 conversations
+2025-03-31 00:55:41,810 - root - INFO - 2024-10-11: 806 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-12: 138 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-13: 131 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-14: 997 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-15: 918 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-16: 893 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-17: 924 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-18: 870 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-19: 104 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-20: 123 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-21: 973 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-22: 934 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-23: 932 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-24: 873 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-25: 860 conversations
+2025-03-31 00:55:41,811 - root - INFO - 2024-10-26: 145 conversations
+2025-03-31 00:55:41,812 - root - INFO - 2024-10-27: 120 conversations
+2025-03-31 00:55:41,812 - root - INFO - 2024-10-28: 944 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-10-29: 875 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-10-30: 903 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-10-31: 937 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-01: 874 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-02: 133 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-03: 110 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-04: 981 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-05: 901 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-06: 946 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-07: 947 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-08: 833 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-09: 107 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-10: 128 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-11: 923 conversations
+2025-03-31 00:55:41,813 - root - INFO - 2024-11-12: 921 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-13: 980 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-14: 873 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-15: 839 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-16: 132 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-17: 127 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-18: 998 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-19: 962 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-20: 899 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-21: 867 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-22: 878 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-23: 136 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-24: 135 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-25: 994 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-26: 964 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-27: 898 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-28: 863 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-29: 855 conversations
+2025-03-31 00:55:41,814 - root - INFO - 2024-11-30: 131 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-01: 127 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-02: 909 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-03: 897 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-04: 903 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-05: 931 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-06: 888 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-07: 123 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-08: 116 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-09: 1034 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-10: 895 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-11: 909 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-12: 877 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-13: 833 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-14: 125 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-15: 134 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-16: 998 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-17: 920 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-18: 952 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-19: 952 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-20: 865 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-21: 140 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-22: 124 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-23: 982 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-24: 878 conversations
+2025-03-31 00:55:41,815 - root - INFO - 2024-12-25: 920 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-26: 876 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-27: 805 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-28: 110 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-29: 127 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-30: 984 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2024-12-31: 948 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-01: 916 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-02: 930 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-03: 829 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-04: 121 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-05: 97 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-06: 964 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-07: 978 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-08: 866 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-09: 921 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-10: 847 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-11: 121 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-12: 118 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-13: 981 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-14: 937 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-15: 940 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-16: 918 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-17: 795 conversations
+2025-03-31 00:55:41,816 - root - INFO - 2025-01-18: 118 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-19: 116 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-20: 1005 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-21: 889 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-22: 984 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-23: 902 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-24: 886 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-25: 117 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-26: 138 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-27: 1004 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-28: 910 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-29: 899 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-30: 888 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-01-31: 870 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-01: 110 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-02: 118 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-03: 978 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-04: 879 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-05: 875 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-06: 958 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-07: 879 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-08: 129 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-09: 118 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-10: 953 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-11: 902 conversations
+2025-03-31 00:55:41,817 - root - INFO - 2025-02-12: 883 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-13: 924 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-14: 815 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-15: 108 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-16: 130 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-17: 977 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-18: 881 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-19: 930 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-20: 935 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-21: 846 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-22: 116 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-23: 115 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-24: 955 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-25: 895 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-26: 889 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-27: 876 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-02-28: 892 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-03-01: 107 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-03-02: 121 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-03-03: 983 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-03-04: 904 conversations
+2025-03-31 00:55:41,818 - root - INFO - 2025-03-05: 903 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-06: 902 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-07: 806 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-08: 121 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-09: 135 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-10: 1036 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-11: 915 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-12: 884 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-13: 913 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-14: 815 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-15: 123 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-16: 106 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-17: 941 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-18: 909 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-19: 966 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-20: 959 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-21: 844 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-22: 128 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-23: 142 conversations
+2025-03-31 00:55:41,819 - root - INFO - 2025-03-24: 609 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2025-03-25: 650 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2025-03-26: 670 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2025-03-27: 810 conversations
+2025-03-31 00:55:41,820 - root - INFO - 
+----- Weekly Distribution -----
+2025-03-31 00:55:41,820 - root - INFO - 2024-W01: 1932 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W38: 1825 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W39: 5044 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W40: 4854 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W41: 4860 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W42: 4829 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W43: 4837 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W44: 4776 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W45: 4843 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W46: 4795 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W47: 4875 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W48: 4832 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W49: 4767 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W50: 4807 conversations
+2025-03-31 00:55:41,820 - root - INFO - 2024-W51: 4951 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2024-W52: 4698 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W01: 2893 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W02: 4815 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W03: 4805 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W04: 4921 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W05: 4799 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W06: 4816 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W07: 4715 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W08: 4800 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W09: 4735 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W10: 4754 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W11: 4792 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W12: 4889 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-W13: 2739 conversations
+2025-03-31 00:55:41,821 - root - INFO - 
+----- Monthly Distribution -----
+2025-03-31 00:55:41,821 - root - INFO - 2024-09: 7869 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2024-10: 22039 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2024-11: 20335 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2024-12: 21282 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-01: 22005 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-02: 19066 conversations
+2025-03-31 00:55:41,821 - root - INFO - 2025-03: 17402 conversations
+2025-03-31 00:55:41,822 - root - INFO - 
+----- Day of Week Distribution -----
+2025-03-31 00:55:41,822 - root - INFO - Monday: 26305 conversations
+2025-03-31 00:55:41,822 - root - INFO - Tuesday: 24326 conversations
+2025-03-31 00:55:41,822 - root - INFO - Wednesday: 24588 conversations
+2025-03-31 00:55:41,822 - root - INFO - Thursday: 24504 conversations
+2025-03-31 00:55:41,822 - root - INFO - Friday: 23286 conversations
+2025-03-31 00:55:41,822 - root - INFO - Saturday: 3457 conversations
+2025-03-31 00:55:41,822 - root - INFO - Sunday: 3532 conversations
+2025-03-31 00:55:41,822 - root - INFO - =========================================================
+2025-03-31 00:55:41,822 - root - INFO - --------------------------------------------------
+2025-03-31 00:55:41,822 - root - INFO - Completed conversation generation

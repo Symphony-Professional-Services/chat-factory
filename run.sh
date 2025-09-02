@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# File: run_and_log.sh
-
+# File: run.sh
+#
 # Description:
-# This script runs the synthetic chat data generation script (main.py) and then the analytics script (metrics.py).
-# It logs all outputs and errors to a log file for tracking.
+# This script runs the synthetic chat data generation using the new framework
+# and then the analytics script (metrics.py). It logs all outputs and errors 
+# to a log file and ensures that output logs are written to a mapped directory.
+# Set run_*.py to run
+RUN_FILE="run_financial_advisory_gemini2.py"
 
 # Set the log file path
 LOG_FILE="run_and_log.log"
@@ -23,24 +26,41 @@ echo "============================================" | tee -a "$LOG_FILE"
 echo "Run ID: ${RUN_ID}" | tee -a "$LOG_FILE"
 echo "Start Time: ${START_TIME}" | tee -a "$LOG_FILE"
 echo "Metadata: ${METADATA}" | tee -a "$LOG_FILE"
-echo "Running main.py..." | tee -a "$LOG_FILE"
+echo "Running chat factory framework..." | tee -a "$LOG_FILE"
 
-# Run main.py and log output and errors
-python main.py >> "$LOG_FILE" 2>&1
+# Create the synthetic_data directory if it doesn't exist and set permissions
+mkdir -p synthetic_data
+chmod -R 777 synthetic_data
 
-# Check if main.py ran successfully
+# Create output directory for logs (ensure /app/output is mapped to host)
+mkdir -p output/logs
+chmod -R 777 output
+
+# Create few shot examples directory if it doesn't exist
+mkdir -p few_shot_examples
+chmod -R 777 few_shot_examples
+
+# Create conversation scripts directory if it doesn't exist
+mkdir -p conversation_scripts
+chmod -R 777 conversation_scripts
+
+# Run the financial advisory generator with the run ID and log output and errors
+echo "Running generator script: $RUN_FILE..." | tee -a "$LOG_FILE"
+poetry run python "$RUN_FILE" --run_id "$RUN_ID" >> "$LOG_FILE" 2>&1
+
+# Check if the generator ran successfully
 if [ $? -ne 0 ]; then
-    echo "main.py encountered an error. Check the log file for details." | tee -a "$LOG_FILE"
+    echo "Generator encountered an error. Check the log file for details." | tee -a "$LOG_FILE"
     exit 1
 fi
 
-echo "main.py completed successfully." | tee -a "$LOG_FILE"
+echo "Generator completed successfully." | tee -a "$LOG_FILE"
 
-# Log the start of analytics
+# Log the start of metrics
 echo "Running metrics.py..." | tee -a "$LOG_FILE"
 
-# Run metrics.py with run_id and metadata, log output and errors
-python metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
+# Run metrics.py with run ID and metadata, log output and errors
+poetry run python scripts/metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
 
 # Check if metrics.py ran successfully
 if [ $? -ne 0 ]; then

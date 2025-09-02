@@ -1,0 +1,10 @@
+synthetic_data/
+processed_synthetic_data/
+conversation_scripts/
+run_and_log.log
+synthetic_chat_generator.log
+__pycache__/
+*.pyc
+*.log
+.git/
+.gitignore
