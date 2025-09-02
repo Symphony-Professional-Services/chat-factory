@@ -61,26 +61,22 @@ The framework is highly configurable. Each use case has its own configuration fi
 
 ## Available Use Cases
 
+This framework is designed to be easily adapted for different use cases. The following use cases are currently implemented:
+
 ### Financial Advisory
 
-Generates conversations between financial advisors and their clients, covering topics like:
+*   **Runner Script:** `run_financial_advisory_gemini2.py`
+*   **Description:** Generates conversations between financial advisors and their ultra-high-net-worth clients. The conversations cover a wide range of financial topics, including investments, retirement planning, tax strategies, estate planning, and trust management.
 
-- Financial Goals & Planning
-- Market Commentary
-- Product & Service Inquiry
-- Small Talk
-- Client Personal Concerns
+### Company Tagging
 
-### Company Tagging (Coming Soon)
+*   **Runner Script:** `run_company_tagging_gemini2.py`
+*   **Description:** Generates conversations that are rich with mentions of specific companies. This use case is designed to create training data for named entity recognition (NER) models that need to identify company names in text. The conversations are focused on topics like company news, earnings reports, and stock performance.
 
-Generates conversations that include specific company mentions for training entity recognition systems, covering:
+### Voice of the Customer (VOC)
 
-- Trade discussions
-- Deal negotiations
-- Stock analysis
-- Market updates
-- News on specific companies
-- Earnings reports discussions
+*   **Runner Script:** `run_voc_gemini2.py`
+*   **Description:** Generates "Voice of the Customer" conversations for the insurance industry. This use case simulates interactions between insurance brokers and life insurance wholesalers, providing insights into customer needs, concerns, and feedback.
 
 ## Extending the Framework
 
@@ -99,7 +95,7 @@ To add a new use case:
 
 ## Additional Tools
 
-- **Metrics Analysis**: Analyze generated conversations with `metrics.py`
+- **Metrics Analysis**: Analyze generated conversations with `scripts/metrics.py`
 - **Post-Processing**: Apply additional processing with `post_processing_add_company_entities.py`
 
 ## Docker Support
@@ -389,7 +385,7 @@ Each conversation file is stored in JSON format and follows this structure:
 To process these files, you can use the built-in tools:
 ```bash
 # Run metrics analysis on generated data
-docker run -it --rm -v $(pwd):/app chat-factory poetry run python metrics.py --run_id "your_run_id"
+docker run -it --rm -v $(pwd):/app chat-factory poetry run python scripts/metrics.py --run_id "your_run_id"
 ```
 
 ## Future Improvements
@@ -401,13 +397,11 @@ docker run -it --rm -v $(pwd):/app chat-factory poetry run python metrics.py --r
 - Enhanced test coverage
 - Support for multimodal content with Gemini 2.0
 
-### THIS COMMAND WORKS
+### Mock
 docker run --rm -e USE_MOCK_PROVIDER=false -v
       $(pwd)/service-account-key.json:/app/google-service-account.json -v $(pwd)/output:/app/output -v
       $(pwd)/synthetic_data:/app/synthetic_data chat-factory:latest --run_id "vertexai_test" --num 1
 
 
-
-
-### THIS WORKS ACTUALLY:
+### Generate w/DOcker:
 docker run --rm -e USE_CASE=financial_advisory_gemini2 -e USE_MOCK_PROVIDER=false   -v $(pwd)/service-account-key.json:/app/google-service-account.json   -v $(pwd)/output:/app/output   -v $(pwd)/synthetic_data:/app/synthetic_data   chat-factory:latest --run_id "company_vertex_run"

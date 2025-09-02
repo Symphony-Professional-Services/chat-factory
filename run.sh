@@ -6,6 +6,8 @@
 # This script runs the synthetic chat data generation using the new framework
 # and then the analytics script (metrics.py). It logs all outputs and errors 
 # to a log file and ensures that output logs are written to a mapped directory.
+# Set run_*.py to run
+RUN_FILE="run_financial_advisory_gemini2.py"
 
 # Set the log file path
 LOG_FILE="run_and_log.log"
@@ -43,8 +45,8 @@ mkdir -p conversation_scripts
 chmod -R 777 conversation_scripts
 
 # Run the financial advisory generator with the run ID and log output and errors
-echo "Running financial advisory generator..." | tee -a "$LOG_FILE"
-poetry run python run_financial_advisory.py --run_id "$RUN_ID" >> "$LOG_FILE" 2>&1
+echo "Running generator script: $RUN_FILE..." | tee -a "$LOG_FILE"
+poetry run python "$RUN_FILE" --run_id "$RUN_ID" >> "$LOG_FILE" 2>&1
 
 # Check if the generator ran successfully
 if [ $? -ne 0 ]; then
@@ -58,7 +60,7 @@ echo "Generator completed successfully." | tee -a "$LOG_FILE"
 echo "Running metrics.py..." | tee -a "$LOG_FILE"
 
 # Run metrics.py with run ID and metadata, log output and errors
-poetry run python metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
+poetry run python scripts/metrics.py --run_id "$RUN_ID" --metadata "$METADATA" >> "$LOG_FILE" 2>&1
 
 # Check if metrics.py ran successfully
 if [ $? -ne 0 ]; then

@@ -25,7 +25,7 @@ TAXONOMY_FILE = "taxonomies/company_tagging_gemini2.json"
 
 # Use expanded company data file with more companies and variations
 COMPANY_DATA_FILE = "company_data_gemini2.csv"
-
+# TODO : CLEAN UP THIS CHUNK (REDUNDANT)
 # Update conversation types to include new types in the enhanced taxonomy
 CONVERSATION_TYPES = [
     "Trade discussions",

@@ -100,12 +100,6 @@ DEFAULT_VALIDATION_CONFIG = {
 }
 
 # Global cache
-# loaded_data_cache = {
-#     "manifest_df": None,
-#     "conversation_content": None,
-#     "generator_config": None,
-#     "taxonomy_topics": None,
-# }
 loaded_data_cache = {
         "manifest_df": None,
         "conversation_content": None, # This might hold convo_id -> lines mapping if loaded elsewhere
@@ -360,8 +354,6 @@ def check_temporal_distribution(manifest_df: Optional[pd.DataFrame], config: Dic
     else:
         message += f" PASS: Coverage meets threshold ({min_coverage_cfg}%)."
 
-    # Check for large gaps (more advanced)
-    # ...
 
     # Distribution checks (example)
     dow_counts = Counter(manifest_df['timestamp_dt'].dt.day_name())

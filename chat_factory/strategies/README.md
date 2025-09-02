@@ -1,184 +1,96 @@
-# Chat Factory Strategy Pattern
+# Strategies Directory README
 
-This document outlines the strategy pattern used in Chat Factory for generating synthetic conversations. It explains each component's role, their interactions, and how to implement new features like datetime distributions and message count controls.
+This directory is the core of the `chat-factory` framework's modularity. It contains the implementations of the different strategies that are used to control the conversation generation process.
 
-## Architecture Overview
+## Overview of the Strategy Pattern
 
-The Chat Factory uses a strategy pattern to separate different concerns in the conversation generation process. The main components and their relationships are outlined below:
+The `chat-factory` uses a strategy pattern to encapsulate different algorithms and behaviors for various parts of the generation process. This makes the framework highly extensible and allows for easy customization for new use cases without modifying the main generation logic.
 
-```
-┌───────────────────────┐
-│ SyntheticChatGenerator│
-└───────────┬───────────┘
-            │ orchestrates
-            ▼
-┌───────────────────────────────────────────────────────────┐
-│                 Strategy Components                        │
-├─────────────────┬─────────────────┬─────────────────┬─────┘
-│                 │                 │                 │
-▼                 ▼                 ▼                 ▼
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│ Taxonomy    │  │ Generation  │  │ Few-Shot    │  │ LLM         │
-│ Strategy    │  │ Strategy    │  │ Strategy    │  │ Provider    │
-└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
-   │                │                │
-   │                │                │
-   ▼                ▼                ▼
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│ Taxonomy    │  │ Conversation│  │ Example     │
-│ Selection   │  │ Construction│  │ Retrieval   │
-└─────────────┘  └─────────────┘  └─────────────┘
-```
+At a high level, the `SyntheticChatGenerator` is the context class that uses several strategy objects. Each strategy object is responsible for a specific part of the generation process.
 
-## Key Components and Responsibilities
+## Core Strategy Components (The Base Classes)
 
-### 1. Strategy Base Classes 
+The `strategies/base/` directory contains the abstract base classes for each type of strategy. These base classes define the common interface that all concrete strategy implementations must adhere to.
 
-Located in `strategies/base/`:
+### `TaxonomyStrategy`
 
-- **`TaxonomyStrategy`**: Manages loading and selecting topics from taxonomy files
-- **`GenerationStrategy`**: Handles conversation structure, prompt construction, and LLM response processing
-- **`FewShotStrategy`**: Manages example retrieval for few-shot learning
+*   **Purpose:** This strategy is responsible for handling the taxonomies that define the topics and structure of the conversations.
+*   **Key Responsibilities:**
+    *   Loading and parsing taxonomy files (e.g., `taxonomies/financial_advisory.json`).
+    *   Flattening the taxonomy into a list of selectable topics.
+    *   Selecting a topic for each conversation based on a configured distribution (e.g., uniform, weighted).
 
-### 2. Implementation Strategies
+### `GenerationStrategy`
 
-Located in domain-specific folders (e.g., `financial_advisory/`, `company_tagging/`):
+*   **Purpose:** This is the main workhorse strategy, responsible for constructing the prompt for the LLM and processing its response.
+*   **Key Responsibilities:**
+    *   Creating a "manifest blueprint" that outlines the parameters for a single conversation (e.g., topic, number of messages, key companies to mention).
+    *   Constructing the detailed prompt that is sent to the LLM, combining the manifest blueprint, few-shot examples, and other instructions.
+    *   Processing the raw text response from the LLM and parsing it into a structured format (`List[Dict[str, str]]`).
 
-- Each use case implements specialized versions of the base strategies
-- These implementations contain domain-specific logic for conversation generation
+### `FewShotExampleStrategy`
 
-### 3. Generator
+*   **Purpose:** This strategy is responsible for selecting and formatting few-shot examples that are included in the prompt to guide the LLM's response.
+*   **Key Responsibilities:**
+    *   Loading few-shot examples from the `few_shot_examples/` directory.
+    *   Selecting a relevant subset of examples based on the conversation's topic and category.
+    *   Formatting the selected examples for inclusion in the final prompt.
 
-The `SyntheticChatGenerator` in `generator.py` orchestrates the entire process:
+### `DatetimeStrategy`
 
-1. Takes strategy objects via dependency injection
-2. Manages conversation lifecycle from topic selection to saving
-3. Coordinates between different strategies during generation
+*   **Purpose:** This strategy is responsible for generating timestamps for the conversations and messages, allowing for the simulation of different temporal distributions.
+*   **Key Responsibilities:**
+    *   Generating a timestamp for each conversation based on a configured distribution (e.g., business hours, uniform).
+    *   Generating timestamps for each message within a conversation to simulate realistic delays.
 
-## Data Flow in Conversation Generation
+## Use-Case Specific Implementations
 
-1. **Topic Selection**:
-   - `TaxonomyStrategy` loads taxonomy from JSON file
-   - Flattens the hierarchical taxonomy into (category, topic, subtopic) tuples
-   - Selects topics based on weighting or random distribution
+The real power of the strategy pattern comes from the ability to create concrete implementations of these base strategies for different use cases. The `financial_advisory/` and `company_tagging/` directories contain examples of such implementations.
 
-2. **Conversation Blueprint Creation**:
-   - `GenerationStrategy` creates a blueprint with conversation parameters
-   - Defines message characteristics, style, and content requirements
-   - May include specialized parameters (e.g., company mentions)
+For example:
 
-3. **Few-Shot Example Selection**:
-   - `FewShotStrategy` retrieves relevant examples based on topic and conversation type
-   - Formats examples for inclusion in LLM prompts
+*   **`financial_advisory/taxonomy_strategy.py`:** Implements the `TaxonomyStrategy` to handle the hierarchical structure of the `financial_advisory.json` taxonomy.
+*   **`company_tagging/generation_strategy.py`:** Implements the `GenerationStrategy` with specific logic for constructing prompts that instruct the LLM to include mentions of specific companies.
 
-4. **Prompt Construction**:
-   - `GenerationStrategy` combines topic, blueprint, and examples into a prompt
-   - Formats prompt according to LLM provider requirements
+By creating a new set of strategy implementations, you can completely change the behavior of the conversation generator to fit a new use case.
 
-5. **LLM Generation**:
-   - `LLMProvider` sends prompt to LLM and receives response
-   - `GenerationStrategy` processes response into standardized format
+## How to Add a New Use-Case Strategy
 
-6. **Conversation Saving**:
-   - Generator creates conversation objects with metadata
-   - Groups conversations by advisor-client pairs
-   - Saves to JSON files in the output directory
+To add a new set of strategies for a new use case, you need to:
 
-## Current Datetime and Message Distribution Implementation
+1.  **Create a new directory:** Create a new directory in `strategies/` for your new use case (e.g., `strategies/my_new_use_case/`).
 
-Currently, the temporal aspects are handled in a limited way:
+2.  **Implement the strategy classes:** In the new directory, create Python files for each strategy you need to customize. Each class should inherit from the appropriate base class in `strategies/base/` and implement the required methods.
 
-- **Conversation Timestamps**: Set at creation time using `datetime.now().isoformat()`
-- **Message Timing**: Messages don't have individual timestamps, only an ordering
-- **Message Distribution**: Controlled by message length ratios in generation strategies
-- **Conversation Grouping**: Multiple conversations between same participants are grouped in single files
+    ```python
+    # strategies/my_new_use_case/generation_strategy.py
 
-## Adding Datetime Distribution Controls
+    from ..base import GenerationStrategy
 
-To implement datetime distribution and message count controls:
+    class MyNewGenerationStrategy(GenerationStrategy):
+        def construct_prompt(self, ...):
+            # Your custom prompt construction logic here
+            ...
+    ```
 
-### 1. Create a New Strategy Class
+3.  **Register the new strategies:** In `strategies/__init__.py`, import your new strategy classes and add them to the corresponding registry dictionaries.
 
-Create a `DatetimeStrategy` base class in `strategies/base/datetime_strategy.py`:
+    ```python
+    # strategies/__init__.py
 
-```python
-class DatetimeStrategy(ABC):
-    """Strategy for controlling temporal aspects of conversations."""
-    
-    @abstractmethod
-    def generate_conversation_timestamp(self, conversation_number: int) -> str:
-        """Generate a timestamp for a conversation."""
-        pass
-        
-    @abstractmethod
-    def generate_message_timestamps(self, 
-                                   conversation_timestamp: str,
-                                   num_messages: int) -> List[str]:
-        """Generate timestamps for each message in a conversation."""
-        pass
-        
-    @abstractmethod
-    def get_message_count_distribution(self, 
-                                      time_period: Tuple[str, str], 
-                                      total_conversations: int) -> Dict[str, int]:
-        """Get distribution of messages across a time period."""
-        pass
-```
+    from .my_new_use_case import MyNewGenerationStrategy
 
-### 2. Extend Model Classes
+    GENERATION_STRATEGIES: Dict[str, Type[GenerationStrategy]] = {
+        "financial_advisory": FinancialAdvisoryGenerationStrategy,
+        "company_tagging": CompanyTaggingGenerationStrategy,
+        "my_new_strategy": MyNewGenerationStrategy
+    }
+    ```
 
-Update `models/conversation.py` to include timestamps for individual messages:
+4.  **Update the configuration:** In your use-case-specific configuration file (in the `configs/` directory), set the appropriate strategy variable to the name of your new strategy.
 
-```python
-@dataclass
-class ChatLine:
-    speaker: str  # "0" = client, "1" = advisor
-    text: str
-    timestamp: Optional[str] = None  # Add timestamp field
-```
+    ```python
+    # configs/my_new_use_case.py
 
-### 3. Modify Generator Class
-
-Update `SyntheticChatGenerator` to use the new strategy:
-
-- Add `datetime_strategy` parameter to constructor
-- Update `process_conversation` to assign timestamps to messages
-- Modify `generate_synthetic_data` to use time-based distributions
-
-### 4. Implement Specialized Strategies
-
-Create implementations like:
-
-- `BusinessHoursDatetimeStrategy`: Focus on business hours distribution
-- `WeekdayWeightedStrategy`: Weight conversations toward business days
-- `CustomPeriodStrategy`: Allow specific start/end dates with distribution
-
-## Example Implementation for Time-Distributed Messages
-
-```python
-class BusinessHoursDatetimeStrategy(DatetimeStrategy):
-    def __init__(self, config):
-        self.config = config
-        self.start_date = config.START_DATE
-        self.end_date = config.END_DATE
-        
-    def generate_conversation_timestamp(self, conversation_number: int) -> str:
-        # Generate timestamp within business hours
-        # Weight toward middle of day and weekdays
-        # ...
-        
-    def generate_message_timestamps(self, conversation_timestamp: str, num_messages: int) -> List[str]:
-        # Generate realistic gaps between messages
-        # Account for thinking/typing time
-        # ...
-```
-
-## Integration Path
-
-1. Create the datetime strategy classes
-2. Update model classes to support message timestamps
-3. Modify generator to use the new strategies
-4. Update implementations in domain-specific folders
-5. Add configuration options for datetime controls
-
-This modular approach allows you to implement advanced temporal controls while maintaining the clean architecture of the existing strategy pattern.
+    GENERATION_STRATEGY = "my_new_strategy"
+    ```

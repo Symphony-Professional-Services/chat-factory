@@ -8,3 +8,4 @@ google-service-account.json
 *.csv
 * copy.py
 service-account-key.json
+*_cleanup.md
